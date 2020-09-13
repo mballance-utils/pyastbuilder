@@ -12,6 +12,7 @@ from astgen.outstream import OutStream
 from astgen.type_pointer import TypePointer, PointerKind
 from astgen.type_userdef import TypeUserDef
 from astgen.visitor import Visitor
+from astgen.gen_cpp_visitor import GenCppVisitor
 
 
 class GenCPP(Visitor):
@@ -22,8 +23,7 @@ class GenCPP(Visitor):
     
     def generate(self, ast):
         ast.accept(self)
-        
-        pass
+        GenCppVisitor(self.outdir).generate(ast)
     
     def visitAstClass(self, c : AstClass):
         h = self.define_class_h(c)
@@ -38,9 +38,6 @@ class GenCPP(Visitor):
         with open(os.path.join(self.outdir, c.name + ".cpp"), "w") as f:
             f.write(cpp)
             
-        print("Header: " + h)
-        print("CPP: " + cpp)
-        
         
     def define_class_h(self, c):
         out_inc = OutStream()
@@ -56,6 +53,7 @@ class GenCPP(Visitor):
         out_h.println("#include <set>")
         out_h.println("#include <string>")
         out_h.println("#include <vector>")
+        out_h.println("#include \"IVisitor.h\"")
         
         if c.super is not None:
             out_h.println("#include \"" + c.super + ".h\"")
@@ -88,6 +86,9 @@ class GenCPP(Visitor):
             out_cls.println("return m_" + f.name + ";")
             out_cls.dec_indent()
             out_cls.println("}")
+            
+        # Visitor call
+        out_cls.println("virtual void accept(IVisitor *v) { v->visit" + c.name + "(this);}")
         
         out_cls.dec_indent()
         out_cls.println();

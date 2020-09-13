@@ -53,7 +53,7 @@ def main():
         
         
     if not hasattr(args, "o") or args.o is None:
-        args.o = "foo"
+        args.o = os.getcwd()
 
     gen = GenCPP(
         args.o, 

@@ -11,6 +11,8 @@ class AstClass(object):
         self.super = None
         self.data = []
         
+        self.deps = {}
+        
     def accept(self, v):
         v.visitAstClass(self)
         

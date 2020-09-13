@@ -13,8 +13,9 @@ from astbuilder.type_pointer import TypePointer
 
 class GenCppVisitor(Visitor):
     
-    def __init__(self, outdir):
+    def __init__(self, outdir, license):
         self.outdir = outdir
+        self.license = license
         
     def generate(self, ast):
         self.gen_ifc(ast)
@@ -26,6 +27,8 @@ class GenCppVisitor(Visitor):
         
         out.println("/****************************************************************************")
         out.println(" * IVisitor.h")
+        if self.license is not None:
+            out.write(self.license)
         out.println(" ****************************************************************************/")
         out.println("#pragma once")
         out.println()
@@ -59,6 +62,8 @@ class GenCppVisitor(Visitor):
         
         out_h.println("/****************************************************************************")
         out_h.println(" * BaseVisitor.h")
+        if self.license is not None:
+            out_h.write(self.license)
         out_h.println(" ****************************************************************************/")
         out_h.println("#pragma once")
         out_h.println("#include \"IVisitor.h\"")
@@ -74,6 +79,8 @@ class GenCppVisitor(Visitor):
         
         out_cpp.println("/****************************************************************************")
         out_cpp.println(" * BaseVisitor.cpp")
+        if self.license is not None:
+            out_cpp.write(self.license)
         out_cpp.println(" ****************************************************************************/")
         out_cpp.println("#include \"BaseVisitor.h\"")
         out_cpp.println()

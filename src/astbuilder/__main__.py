@@ -7,6 +7,8 @@ import argparse
 import os
 from astbuilder.parser import Parser
 from astbuilder.gen_cpp import GenCPP
+from astbuilder.ast import Ast
+from astbuilder.linker import Linker
 
 def find_json_files(path):
     ret = []
@@ -25,6 +27,7 @@ def main():
     parser.add_argument("-astdir", nargs="+")
     parser.add_argument("-o")
     parser.add_argument("-license")
+    parser.add_argument("-namespace")
     
     args = parser.parse_args()
   
@@ -32,9 +35,12 @@ def main():
     json_files = []    
     for d in args.astdir:
         json_files.extend(find_json_files(d))
-        
+
+    ast = Ast()        
     for file in json_files:
-        ast = Parser().parse(file)
+        ast = Parser(ast).parse(file)
+        
+    Linker().link(ast)
         
     if not hasattr(args, "license") or args.license is None:
         args.license = None
@@ -42,13 +48,17 @@ def main():
         if not os.path.exists(args.license):
             raise Exception("License file " + args.license + " does not exist")
         
+    if not hasattr(args, "namespace"):
+        args.namespace = None
+        
         
     if not hasattr(args, "o") or args.o is None:
         args.o = "foo"
 
     gen = GenCPP(
         args.o, 
-        args.license)
+        args.license,
+        args.namespace)
     
     gen.generate(ast)
         

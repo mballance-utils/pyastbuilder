@@ -17,11 +17,11 @@ from astbuilder.ast_enum import AstEnum
 
 class Parser(object):
     
-    def __init__(self):
+    def __init__(self, ast : Ast):
+        self.ast = ast
         pass
     
     def parse(self, file):
-        self.ast = Ast()
         with open(file, "r") as fp:
             content = fp.read()
             
@@ -42,7 +42,7 @@ class Parser(object):
             raise Exception("Expect classes to be a list")
         
         for e in classes:
-            self.ast.classes.append(self.parse_class(e))
+            self.ast.addClass(self.parse_class(e))
             
     def parse_class(self, cls):
         ast_cls = AstClass()
@@ -63,14 +63,25 @@ class Parser(object):
     def parse_class_data(self, ast_cls, data):
         
         for key in data.keys():
+            is_ctor = True
+            init = None
             item = data[key]
             if isinstance(item, str):
                 # Simple type signature
                 t = self.parse_simple_type(item)
+            elif isinstance(item, dict):
+                t = self.parse_simple_type(item['type'])
+                if 'is_ctor' in item.keys():
+                    is_ctor = bool(item['is_ctor'])
+                if 'init' in item.keys():
+                    init = str(item['init'])
             else:
                 raise Exception("Unknown type signature")
 
-            ast_cls.data.append(AstData(key, t))
+            is_ctor &= not isinstance(t, TypeList)
+            d = AstData(key, t, is_ctor)
+            d.init = init
+            ast_cls.data.append(d)
 
     def parse_simple_type(self, item):
         ret = None
@@ -118,6 +129,6 @@ class Parser(object):
                 ev = enum['values'][e]
                 ast_e.values.append((e,ev))
             
-            self.ast.enums.append(ast_e)
+            self.ast.addEnum(ast_e)
         
         

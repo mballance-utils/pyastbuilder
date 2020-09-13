@@ -6,9 +6,11 @@ Created on Sep 12, 2020
 
 class AstData(object):
     
-    def __init__(self, name, t):
+    def __init__(self, name, t, is_ctor):
         self.name = name
         self.t = t
+        self.is_ctor = is_ctor
+        self.init = None
         
     def accept(self, v):
         v.visitAstData(self)

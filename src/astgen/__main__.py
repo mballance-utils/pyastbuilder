@@ -34,8 +34,11 @@ def main():
         
     for file in json_files:
         ast = Parser().parse(file)
+        
+    if not hasattr(args, "o") or args.o is None:
+        args.o = "foo"
 
-    gen = GenCPP("foo")
+    gen = GenCPP(args.o)
     
     gen.generate(ast)
         

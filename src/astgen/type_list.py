@@ -8,3 +8,6 @@ class TypeList(object):
     
     def __init__(self, t):
         self.t = t
+        
+    def accept(self, v):
+        v.visitTypeList(self)

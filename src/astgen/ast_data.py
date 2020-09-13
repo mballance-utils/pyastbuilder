@@ -10,3 +10,6 @@ class AstData(object):
         self.name = name
         self.t = t
         
+    def accept(self, v):
+        v.visitAstData(self)
+        

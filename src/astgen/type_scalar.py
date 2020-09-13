@@ -21,7 +21,7 @@ class TypeScalar(Enum):
         self.t = t
         
     def accept(self, v):
-        pass
+        v.visitTypeScalar(self)
     
     
     

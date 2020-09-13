@@ -5,10 +5,10 @@ Created on Sep 13, 2020
 '''
 import os
 
-from astgen.outstream import OutStream
-from astgen.visitor import Visitor
-from astgen.type_list import TypeList
-from astgen.type_pointer import TypePointer
+from astbuilder.outstream import OutStream
+from astbuilder.visitor import Visitor
+from astbuilder.type_list import TypeList
+from astbuilder.type_pointer import TypePointer
 
 
 class GenCppVisitor(Visitor):

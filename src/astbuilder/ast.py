@@ -8,6 +8,7 @@ class Ast(object):
     
     def __init__(self):
         self.classes = []
+        self.enums = []
         
     def accept(self, v):
         v.visitAst(self)

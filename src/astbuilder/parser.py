@@ -5,13 +5,14 @@ Created on Sep 12, 2020
 '''
 import json
 
-from astgen.ast import Ast
-from astgen.ast_class import AstClass
-from astgen.ast_data import AstData
-from astgen.type_list import TypeList
-from astgen.type_pointer import TypePointer, PointerKind
-from astgen.type_scalar import TypeScalar
-from astgen.type_userdef import TypeUserDef
+from astbuilder.ast import Ast
+from astbuilder.ast_class import AstClass
+from astbuilder.ast_data import AstData
+from astbuilder.type_list import TypeList
+from astbuilder.type_pointer import TypePointer, PointerKind
+from astbuilder.type_scalar import TypeScalar, TypeKind
+from astbuilder.type_userdef import TypeUserDef
+from astbuilder.ast_enum import AstEnum
 
 
 class Parser(object):
@@ -24,15 +25,15 @@ class Parser(object):
         with open(file, "r") as fp:
             content = fp.read()
             
-        print("content=" + str(content))
-        
         doc = json.loads(content)
         
         for key in doc.keys():
             if key == "classes":
                 self.parse_classes(doc["classes"])
-                
-            print("key=" + str(key))
+            elif key == "enums":
+                self.parse_enums(doc["enums"])
+            else:
+                raise Exception("Unknown section " + key)
             
         return self.ast
     
@@ -48,9 +49,9 @@ class Parser(object):
         
         for key in cls.keys():
             if key == "name":
-                ast_cls.name = cls[key]
+                ast_cls.name = cls[key].strip()
             elif key == "super":
-                ast_cls.super = cls[key]
+                ast_cls.super = cls[key].strip()
             elif key == "data":
                 self.parse_class_data(ast_cls, cls[key])
                 
@@ -63,7 +64,6 @@ class Parser(object):
         
         for key in data.keys():
             item = data[key]
-            print("item: " + key + " data: " + str(item))
             if isinstance(item, str):
                 # Simple type signature
                 t = self.parse_simple_type(item)
@@ -76,15 +76,16 @@ class Parser(object):
         ret = None
         
         primitive_m = {
-            "string" : TypeScalar(TypeScalar.String),
-            "uint8_t" : TypeScalar(TypeScalar.Uint8),
-            "int8_t" : TypeScalar(TypeScalar.Int8),
-            "uint16_t" : TypeScalar(TypeScalar.Uint16),
-            "int16_t" : TypeScalar(TypeScalar.Int16),
-            "uint32_t" : TypeScalar(TypeScalar.Uint32),
-            "int32_t" : TypeScalar(TypeScalar.Int32),
-            "uint64_t" : TypeScalar(TypeScalar.Uint64),
-            "int64_t" : TypeScalar(TypeScalar.Int64)
+            "string" : TypeScalar(TypeKind.String),
+            "bool" : TypeScalar(TypeKind.Bool),
+            "uint8_t" : TypeScalar(TypeKind.Uint8),
+            "int8_t" : TypeScalar(TypeKind.Int8),
+            "uint16_t" : TypeScalar(TypeKind.Uint16),
+            "int16_t" : TypeScalar(TypeKind.Int16),
+            "uint32_t" : TypeScalar(TypeKind.Uint32),
+            "int32_t" : TypeScalar(TypeKind.Int32),
+            "uint64_t" : TypeScalar(TypeKind.Uint64),
+            "int64_t" : TypeScalar(TypeKind.Int64)
             }
        
         if item in primitive_m.keys():
@@ -107,6 +108,16 @@ class Parser(object):
             ret = TypeUserDef(item)
             
         return ret
+    
+    def parse_enums(self, enums):
+        
+        for enum in enums:
+            ast_e = AstEnum(enum['name'].strip())
+        
+            for e in enum['values'].keys():
+                ev = enum['values'][e]
+                ast_e.values.append((e,ev))
             
+            self.ast.enums.append(ast_e)
         
         

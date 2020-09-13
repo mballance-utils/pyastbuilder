@@ -5,9 +5,9 @@ Created on Sep 12, 2020
 '''
 from enum import Enum, auto
 
-
-class TypeScalar(Enum):
+class TypeKind(Enum):
     String = auto()
+    Bool = auto()
     Uint8 = auto()
     Int8 = auto()
     Uint16 = auto()
@@ -16,8 +16,10 @@ class TypeScalar(Enum):
     Int32 = auto()
     Uint64 = auto()
     Int64 = auto()
+
+class TypeScalar(object):
     
-    def __init__(self, t):
+    def __init__(self, t : TypeKind):
         self.t = t
         
     def accept(self, v):

@@ -3,8 +3,9 @@ Created on Sep 12, 2020
 
 @author: ballance
 '''
-from astgen.ast_data import AstData
-from astgen.ast import Ast
+from astbuilder.ast_data import AstData
+from astbuilder.ast import Ast
+from astbuilder.ast_enum import AstEnum
 
 class Visitor(object):
     
@@ -14,6 +15,8 @@ class Visitor(object):
     def visitAst(self, ast : Ast):
         for cls in ast.classes:
             cls.accept(self)
+        for enum in ast.enums:
+            enum.accept(self)
 
     def visitAstClass(self, c):
         for d in c.data:
@@ -21,6 +24,9 @@ class Visitor(object):
             
     def visitAstData(self, d : AstData):
         d.t.accept(self)
+        
+    def visitAstEnum(self, e : AstEnum):
+        pass
         
     def visitTypeList(self, t):
         t.t.accept(self)

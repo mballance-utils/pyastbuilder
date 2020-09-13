@@ -6,23 +6,35 @@ Created on Sep 12, 2020
 import os
 import shutil
 
-from astgen.ast import Ast
-from astgen.ast_class import AstClass
-from astgen.outstream import OutStream
-from astgen.type_pointer import TypePointer, PointerKind
-from astgen.type_userdef import TypeUserDef
-from astgen.visitor import Visitor
-from astgen.gen_cpp_visitor import GenCppVisitor
-from astgen.type_list import TypeList
+from astbuilder.ast import Ast
+from astbuilder.ast_class import AstClass
+from astbuilder.ast_enum import AstEnum
+from astbuilder.gen_cpp_visitor import GenCppVisitor
+from astbuilder.outstream import OutStream
+from astbuilder.type_list import TypeList
+from astbuilder.type_pointer import TypePointer, PointerKind
+from astbuilder.type_scalar import TypeScalar, TypeKind
+from astbuilder.type_userdef import TypeUserDef
+from astbuilder.visitor import Visitor
 
 
 class GenCPP(Visitor):
     
-    def __init__(self, outdir):
+    def __init__(self, outdir, license):
         self.outdir = outdir
+        self.license = None
+        
+        if license is not None:
+            with open(license, "r") as f:
+                self.license = f.read()
+        self.enum_t = set()
         pass
     
     def generate(self, ast):
+        # Collect the set of enumerated-type names
+        for e in ast.enums:
+            self.enum_t.add(e.name)
+            
         ast.accept(self)
         GenCppVisitor(self.outdir).generate(ast)
         
@@ -42,6 +54,26 @@ class GenCPP(Visitor):
         with open(os.path.join(self.outdir, c.name + ".cpp"), "w") as f:
             f.write(cpp)
             
+    def visitAstEnum(self, e:AstEnum):
+        out_h = OutStream()
+        out_h.println("/****************************************************************************")
+        out_h.println(" * " + e.name + ".h")
+        if self.license is not None:
+            out_h.write(self.license)
+        out_h.println(" ****************************************************************************/")
+        out_h.println("#pragma once")
+        out_h.println()
+        
+        out_h.println("enum " + e.name + " {")
+        out_h.inc_indent()
+        
+        for v in e.values:
+            out_h.println(v[0] + ",")
+        out_h.dec_indent()
+        out_h.println("};")
+        
+        with open(os.path.join(self.outdir, e.name + ".h"), "w") as f:
+            f.write(out_h.content())
             
         
     def define_class_h(self, c):
@@ -51,8 +83,11 @@ class GenCPP(Visitor):
         out_h = OutStream()
         out_h.println("/****************************************************************************")
         out_h.println(" * " + c.name + ".h")
+        if self.license is not None:
+            out_h.write(self.license)
         out_h.println(" ****************************************************************************/")
         out_h.println("#pragma once")
+        out_h.println("#include <stdint.h>")
         out_h.println("#include <map>")
         out_h.println("#include <memory>")
         out_h.println("#include <set>")
@@ -65,7 +100,7 @@ class GenCPP(Visitor):
             out_h.println()
 
         # Create forward references
-        out_h.println(FieldForwardRefGen().gen(c))
+        out_h.println(FieldForwardRefGen(self.enum_t).gen(c))
         
         out_cls.write("class " + c.name)
         
@@ -121,6 +156,8 @@ class GenCPP(Visitor):
         out_cpp = OutStream()
         out_cpp.println("/****************************************************************************")
         out_cpp.println(" * " + c.name + ".cpp")
+        if self.license is not None:
+            out_cpp.write(self.license)
         out_cpp.println(" ****************************************************************************/")
         out_cpp.println("#include \"" + c.name + ".h\"")
         out_cpp.println()
@@ -155,7 +192,8 @@ class GenCPP(Visitor):
     
 class FieldForwardRefGen(Visitor):
        
-    def __init__(self):
+    def __init__(self, enum_t):
+        self.enum_t = enum_t
         self.out = OutStream()
         self.seen = set()
     
@@ -179,7 +217,10 @@ class FieldForwardRefGen(Visitor):
     def visitTypeUserDef(self, t : TypeUserDef):
         if t.name not in self.seen:
             self.seen.add(t.name)
-            self.out.println("class " + t.name + ";")
+            if t.name in self.enum_t:
+                self.out.println("enum " + t.name + ";")
+            else:
+                self.out.println("class " + t.name + ";")
                 
 class FieldIncludeGen(Visitor):
        
@@ -258,7 +299,21 @@ class TypeNameGen(Visitor):
             self.depth -= 1
         else:
             self.out += TypeNameGen().gen(t)
-        
+
+    def visitTypeScalar(self, t : TypeScalar):
+        vmap = {
+            TypeKind.String : "std::string",
+            TypeKind.Bool : "bool",
+            TypeKind.Int8: "int8_t",
+            TypeKind.Uint8: "uint8_t",
+            TypeKind.Int16: "int16_t",
+            TypeKind.Uint16: "uint16_t",
+            TypeKind.Int32: "int32_t",
+            TypeKind.Uint32: "uint32_t",
+            TypeKind.Int64: "int64_t",
+            TypeKind.Uint64: "uint64_t",
+            }
+        self.out += vmap[t.t]
     
     def visitTypeUserDef(self, t):
         self.out += t.name

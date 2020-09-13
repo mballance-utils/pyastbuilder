@@ -13,6 +13,7 @@ from astgen.type_pointer import TypePointer, PointerKind
 from astgen.type_userdef import TypeUserDef
 from astgen.visitor import Visitor
 from astgen.gen_cpp_visitor import GenCppVisitor
+from astgen.type_list import TypeList
 
 
 class GenCPP(Visitor):
@@ -24,6 +25,9 @@ class GenCPP(Visitor):
     def generate(self, ast):
         ast.accept(self)
         GenCppVisitor(self.outdir).generate(ast)
+        
+        with open(os.path.join(self.outdir, "CMakeLists.txt"), "w") as f:
+            f.write(self.gen_cmake(ast))
     
     def visitAstClass(self, c : AstClass):
         h = self.define_class_h(c)
@@ -37,6 +41,7 @@ class GenCPP(Visitor):
             
         with open(os.path.join(self.outdir, c.name + ".cpp"), "w") as f:
             f.write(cpp)
+            
             
         
     def define_class_h(self, c):
@@ -83,9 +88,16 @@ class GenCPP(Visitor):
             out_cls.println(
                 TypeNameGen(compressed=True,is_ret=True).gen(f.t) + " " + f.name + "() const {")
             out_cls.inc_indent()
-            out_cls.println("return m_" + f.name + ";")
+            # Return the raw pointer held by a unique pointer. Return everything else by value
+            if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
+                out_cls.println("return m_" + f.name + ".get();")
+            else:
+                out_cls.println("return m_" + f.name + ";")
             out_cls.dec_indent()
             out_cls.println("}")
+
+            # TODO: Generate an accessor for adding list elements            
+            # TODO: Generate an accessor for accessing individual elements            
             
         # Visitor call
         out_cls.println("virtual void accept(IVisitor *v) { v->visit" + c.name + "(this);}")
@@ -117,6 +129,29 @@ class GenCPP(Visitor):
         # TODO: include dependencies
         
         return out_cpp.content()
+    
+    def gen_cmake(self, ast):
+        out = OutStream()
+        project = "project"
+        out.println("#****************************************************************************")
+        out.println("#* CMakeLists.txt for " + project)
+        out.println("#****************************************************************************")
+        out.println()
+        out.println("cmake_minimum_required (VERSION 2.8)")
+        out.println()
+        out.println("project (" + project + ")")
+        out.println()
+        out.println("file(GLOB_RECURSE " + project + "_SRC")
+        out.inc_indent()
+        out.println("\"*.h\"")
+        out.println("\"*.cpp\"")
+        out.dec_indent()
+        out.println(")")
+        out.println()
+        out.println("add_library(" + project + "_ast ${" + project + "_SRC})")
+        
+        return out.content()
+        
     
 class FieldForwardRefGen(Visitor):
        

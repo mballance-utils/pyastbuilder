@@ -8,19 +8,19 @@ if "BUILD_NUM" in os.environ.keys():
     version += "." + os.environ["BUILD_NUM"]
 
 setup(
-  name = "pyastgen",
+  name = "pyastbuilder",
   version = version,
-  packages=['astgen'],
+  packages=['astbuilder'],
   package_dir = {'' : 'src'},
   author = "Matthew Ballance",
   author_email = "matt.ballance@gmail.com",
-  description = ("Utility for generating AST classes"),
+  description = ("Utility for generating AST classes from a json description"),
   license = "Apache 2.0",
   keywords = ["Parsing"],
-  url = "https://github.com/mballance/pyastgen",
+  url = "https://github.com/mballance/pyastbuilder",
   entry_points={
     'console_scripts': [
-      'astgen = astgen.__main__:main'
+      'astbuilder = astbuilder.__main__:main'
     ]
   },
   setup_requires=[

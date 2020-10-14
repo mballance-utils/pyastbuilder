@@ -8,6 +8,7 @@ class TypeUserDef(object):
     
     def __init__(self, name):
         self.name = name
+        self.target = None
         
     def accept(self, v):
         v.visitTypeUserDef(self)

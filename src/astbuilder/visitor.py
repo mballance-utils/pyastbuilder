@@ -19,6 +19,8 @@ class Visitor(object):
             enum.accept(self)
 
     def visitAstClass(self, c):
+        if c.super is not None:
+            c.super.accept(self)
         for d in c.data:
             d.accept(self)
             

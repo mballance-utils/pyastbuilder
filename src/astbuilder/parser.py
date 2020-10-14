@@ -51,7 +51,7 @@ class Parser(object):
             if key == "name":
                 ast_cls.name = cls[key].strip()
             elif key == "super":
-                ast_cls.super = cls[key].strip()
+                ast_cls.super = TypeUserDef(cls[key].strip())
             elif key == "data":
                 self.parse_class_data(ast_cls, cls[key])
                 

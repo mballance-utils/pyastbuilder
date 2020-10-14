@@ -11,10 +11,15 @@ class Linker(Visitor):
     def __init__(self):
         self.active_class = None
         self.ast = None
-        pass
+        self.phase = 0
     
     def link(self, ast):
         self.ast = ast
+        
+        self.phase = 0
+        ast.accept(self)
+        
+        self.phase = 1
         ast.accept(self)
         
     def visitAstClass(self, c):
@@ -27,9 +32,11 @@ class Linker(Visitor):
             if t.name in self.ast.class_m.keys():
                 ref = AstRef(self.ast.class_m[t.name])
                 self.active_class.deps[t.name] = ref
+                t.target = self.ast.class_m[t.name]
             elif t.name in self.ast.enum_m.keys():
                 ref = AstRef(self.ast.enum_m[t.name])
                 self.active_class.deps[t.name] = ref
+                t.target = self.ast.enum_m[t.name]
             else:
                 # TODO: add external classes later
                 raise Exception("user-defined type " + t.name + " is not declared")

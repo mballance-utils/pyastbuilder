@@ -107,15 +107,23 @@ class GenCPP(Visitor):
         out_h.println("#include \"IVisitor.h\"")
         
         if c.super is not None:
-            out_h.println("#include \"" + c.super + ".h\"")
+            out_h.println("#include \"" + c.super.name + ".h\"")
             out_h.println()
 
         # Handle dependencies
         for key,d in c.deps.items():
-            if not d.circular:
+            if isinstance(d.target, AstClass):
+                out_h.println("class " + key + ";")
+                out_h.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
+                out_h.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
+            elif isinstance(d.target, AstEnum):
                 out_h.println("#include \"" + key + ".h\"")
             else:
-                raise Exception("TODO: handle circular dependency on " + key)
+                raise Exception("Unknown ref " + str(d.target))
+#            if not d.circular:
+#                out_h.println("#include \"" + key + ".h\"")
+#            else:
+#                raise Exception("TODO: handle circular dependency on " + key)
 
         if self.namespace is not None:
             out_cls.println()
@@ -135,17 +143,13 @@ class GenCPP(Visitor):
         out_cls.write("class " + c.name)
         
         if c.super is not None:
-            out_cls.write(" : public " + c.super)
+            out_cls.write(" : public " + c.super.name)
         out_cls.write(" {\n")
         out_cls.write("public:\n")
         out_cls.inc_indent()
         out_cls.println(c.name + "(");
         out_cls.inc_indent()
-        params = list(filter(lambda d : d.is_ctor, c.data))
-        for i,p in enumerate(params):
-            out_cls.println(
-                TypeNameGen(compressed=True,is_ret=True).gen(p.t) + " " + p.name + 
-                    ("," if i+1 < len(params) else ""))
+        self.gen_ctor_params(c, out_cls)
         out_cls.println(");");
         out_cls.dec_indent()
         
@@ -203,8 +207,7 @@ class GenCPP(Visitor):
         out_cpp.println()
         # Include files needed for circular dependencies
         for key,d in c.deps.items():
-            if d.circular:
-                out_cpp.println("#include \"" + key + ".h\"")
+            out_cpp.println("#include \"" + key + ".h\"")
                 
         out_cpp.println()
         
@@ -213,23 +216,15 @@ class GenCPP(Visitor):
             out_cpp.println()
             
         out_cpp.println(c.name + "::" + c.name + "(")
+        
         out_cpp.inc_indent()
-        params = list(filter(lambda d : d.is_ctor, c.data))
-        for i,p in enumerate(params):
-            out_cpp.println(
-                TypeNameGen(compressed=True,is_ret=True).gen(p.t) + " " + p.name + 
-                    ("," if i+1 < len(params) else ") :"))
+        self.gen_ctor_params(c, out_cpp)
+        out_cpp.write(")")
+        self.gen_ctor_init(c, out_cpp)
         out_cpp.dec_indent()
-        if len(params) == 0:
-            out_cpp.println(") {")
-        else:
-            out_cpp.inc_indent()
-            out_cpp.inc_indent()
-            for i,p in enumerate(params):
-                out_cpp.println("m_" + p.name + "(" + p.name + ")" +
-                                ("," if i+1 < len(params) else " {"))
-            out_cpp.dec_indent()
-            out_cpp.dec_indent()
+        
+        out_cpp.println("{\n")
+ 
 
         # Assign fields that are non-parameter and have defaults            
         out_cpp.inc_indent()
@@ -249,6 +244,79 @@ class GenCPP(Visitor):
             out_cpp.println("} /* namespace " + self.namespace + " */")
         
         return out_cpp.content()
+    
+    def gen_ctor_params(self, c, out_cpp):
+        """Returns True if this level (or a previous level) added content"""
+        ret = False
+        if c.super is not None:
+            # Recurse first
+            ret |= self.gen_ctor_params(c.super.target, out_cpp)
+            
+        params = list(filter(lambda d : d.is_ctor, c.data))
+        for i,p in enumerate(params):
+            if ret and i == 0:
+                out_cpp.write(",\n")
+            out_cpp.write(out_cpp.ind)
+            out_cpp.write(TypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
+            out_cpp.write(p.name + (",\n" if i+1 < len(params) else ""))
+            ret = True
+        
+        return ret
+    
+    def collect_super_params(self, c):
+        if c.super is not None:
+            params = self.collect_super_params(c.super.target)
+        else:
+            params = []
+        params.extend(list(filter(lambda d : d.is_ctor, c.data)))
+        
+        return params
+    
+    def gen_ctor_init(self, c, out_cpp):
+        # TODO: collect what must be passed to base type
+        if c.super is not None:
+            super_params = self.collect_super_params(c.super.target)
+        else:
+            super_params = []
+        
+        params = list(filter(lambda d : d.is_ctor, c.data))
+        
+        if len(super_params) > 0 or len(params) > 0:
+            out_cpp.write(" : \n")
+        out_cpp.inc_indent()
+        
+        if len(super_params) > 0:
+            out_cpp.write(out_cpp.ind + c.super.target.name + "(")
+            for i,p in enumerate(super_params):
+                out_cpp.write(p.name + (", " if i+1<len(super_params) else ""))
+            out_cpp.write(")")
+            if len(params) > 0:
+                out_cpp.write(",\n")
+            
+        
+        # First, handle super-params
+        
+        for i,p in enumerate(params):
+            out_cpp.println("m_" + p.name + "(" + p.name + ")" +
+                    ("," if (i+1) < len(params) else ""))
+        
+        out_cpp.dec_indent()
+        
+#        if c.super is not None:
+#            self.gen_ctor_init(c.super.target, out_cpp)
+#        out_cpp.write(") :\n")
+#         out_cpp.dec_indent()
+#         
+#         if len(params) == 0:
+#             out_cpp.println(") {")
+#         else:
+#             out_cpp.inc_indent()
+#             out_cpp.inc_indent()
+#             for i,p in enumerate(params):
+#                 out_cpp.println("m_" + p.name + "(" + p.name + ")" +
+#                                 ("," if i+1 < len(params) else " {"))
+#             out_cpp.dec_indent()
+#             out_cpp.dec_indent()        
     
     def gen_cmake(self, ast):
         out = OutStream()

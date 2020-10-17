@@ -6,9 +6,11 @@ Created on Sep 13, 2020
 import os
 
 from astbuilder.outstream import OutStream
-from astbuilder.visitor import Visitor
 from astbuilder.type_list import TypeList
 from astbuilder.type_pointer import TypePointer
+from astbuilder.visitor import Visitor
+from .cpp_type_name_gen import CppTypeNameGen
+from astbuilder.type_scalar import TypeScalar
 
 
 class GenCppVisitor(Visitor):
@@ -121,10 +123,22 @@ class GenCppVisitor(Visitor):
             fp.write(out_cpp.content())
             
     def gen_class_visitor(self, out_cpp, c):
+        if c.super is not None:
+            out_cpp.println("visit" + c.super.target.name + "(i);")
         for d in c.data:
             if isinstance(d.t, TypeList):
-                # Generate an iterator
-                pass
+                # Generate an iterator, as long as the
+                # list is of a complex type
+                if not isinstance(d.t.t, (TypeScalar,)):
+                    out_cpp.println("for (std::vector<" + CppTypeNameGen().gen(d.t.t) + ">::const_iterator")
+                    out_cpp.inc_indent()
+                    out_cpp.inc_indent()
+                    out_cpp.println("it=i->" + d.name + "().begin();")
+                    out_cpp.println("it!=i->" + d.name + "().end(); it++) {")
+                    out_cpp.dec_indent()
+                    out_cpp.println("(*it)->accept(this);")
+                    out_cpp.dec_indent()
+                    out_cpp.println("}")
             elif isinstance(d.t, TypePointer):
                 out_cpp.println("if (i->" + d.name + "()) {")
                 out_cpp.inc_indent()

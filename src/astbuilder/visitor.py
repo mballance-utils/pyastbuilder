@@ -6,6 +6,7 @@ Created on Sep 12, 2020
 from astbuilder.ast_data import AstData
 from astbuilder.ast import Ast
 from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 
 class Visitor(object):
     
@@ -17,6 +18,8 @@ class Visitor(object):
             cls.accept(self)
         for enum in ast.enums:
             enum.accept(self)
+        for f in ast.flags:
+            f.accept(self)
 
     def visitAstClass(self, c):
         if c.super is not None:
@@ -29,9 +32,16 @@ class Visitor(object):
         
     def visitAstEnum(self, e : AstEnum):
         pass
+    
+    def visitAstFlags(self, f : AstFlags):
+        pass
         
     def visitTypeList(self, t):
         t.t.accept(self)
+        
+    def visitTypeMap(self, t):
+        t.kt.accept(self)
+        t.vt.accept(self)
         
     def visitTypePointer(self, t):
         t.t.accept(self)

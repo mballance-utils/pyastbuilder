@@ -11,6 +11,8 @@ class Ast(object):
         self.class_m = {}
         self.enums = []
         self.enum_m = {}
+        self.flags = []
+        self.flags_m = {}
         
     def addClass(self, c):
         if c.name in self.class_m.keys():
@@ -23,6 +25,12 @@ class Ast(object):
             raise Exception("Enum " + e.name + " already declared")
         self.enum_m[e.name] = e
         self.enums.append(e)
+        
+    def addFlags(self, f):
+        if f.name in self.flags_m.keys():
+            raise Exception("Flags " + f.name + " already declared")
+        self.flags_m[f.name] = f
+        self.flags.append(f)
         
     def accept(self, v):
         v.visitAst(self)

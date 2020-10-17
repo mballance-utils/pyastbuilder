@@ -37,6 +37,10 @@ class Linker(Visitor):
                 ref = AstRef(self.ast.enum_m[t.name])
                 self.active_class.deps[t.name] = ref
                 t.target = self.ast.enum_m[t.name]
+            elif t.name in self.ast.flags_m.keys():
+                ref = AstRef(self.ast.flags_m[t.name])
+                self.active_class.deps[t.name] = ref
+                t.target = self.ast.flags_m[t.name]
             else:
                 # TODO: add external classes later
                 raise Exception("user-defined type " + t.name + " is not declared")

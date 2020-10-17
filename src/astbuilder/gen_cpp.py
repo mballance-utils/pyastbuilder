@@ -9,6 +9,7 @@ import shutil
 from astbuilder.ast import Ast
 from astbuilder.ast_class import AstClass
 from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 from astbuilder.gen_cpp_visitor import GenCppVisitor
 from astbuilder.outstream import OutStream
 from astbuilder.type_list import TypeList
@@ -16,6 +17,8 @@ from astbuilder.type_pointer import TypePointer, PointerKind
 from astbuilder.type_scalar import TypeScalar, TypeKind
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
+
+from .cpp_type_name_gen import CppTypeNameGen
 
 
 class GenCPP(Visitor):
@@ -85,7 +88,32 @@ class GenCPP(Visitor):
         
         with open(os.path.join(self.outdir, e.name + ".h"), "w") as f:
             f.write(out_h.content())
-            
+
+    def visitAstFlags(self, f:AstFlags):
+        out_h = OutStream()
+        out_h.println("/****************************************************************************")
+        out_h.println(" * " + f.name + ".h")
+        if self.license is not None:
+            out_h.write(self.license)
+        out_h.println(" ****************************************************************************/")
+        out_h.println("#pragma once")
+        out_h.println("#include <stdint.h>")
+        out_h.println()
+        
+        if self.namespace is not None:
+            out_h.println("namespace " + self.namespace + " {")
+        
+        out_h.println("typedef uint32_t " + f.name + ";")
+        
+        for i,v in enumerate(f.values):
+            out_h.println("static const " + f.name + " " + v + " = (1 << " + str(i) + ");")
+        
+        if self.namespace is not None:
+            out_h.println()
+            out_h.println("} /* namespace " + self.namespace + " */")
+        
+        with open(os.path.join(self.outdir, f.name + ".h"), "w") as f:
+            f.write(out_h.content())
         
     def define_class_h(self, c):
         out_inc = OutStream()
@@ -159,8 +187,21 @@ class GenCPP(Visitor):
         
         # Field accessors
         for f in c.data:
+            # Const accessor
             out_cls.println(
-                TypeNameGen(compressed=True,is_ret=True).gen(f.t) + " " + f.name + "() const {")
+                CppTypeNameGen(compressed=True,is_ret=True,is_const=True).gen(f.t) + " " + f.name + "() const {")
+            out_cls.inc_indent()
+            # Return the raw pointer held by a unique pointer. Return everything else by value
+            if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
+                out_cls.println("return m_" + f.name + ".get();")
+            else:
+                out_cls.println("return m_" + f.name + ";")
+            out_cls.dec_indent()
+            out_cls.println("}")
+            
+            # Non-const accessor
+            out_cls.println(
+                CppTypeNameGen(compressed=True,is_ret=True,is_const=False).gen(f.t) + " " + f.name + "() {")
             out_cls.inc_indent()
             # Return the raw pointer held by a unique pointer. Return everything else by value
             if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
@@ -181,7 +222,7 @@ class GenCPP(Visitor):
         out_cls.println("private:\n")
         out_cls.inc_indent()
         for f in c.data:
-            out_cls.println(TypeNameGen(True).gen(f.t) + " m_" + f.name + ";")
+            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name + ";")
         out_cls.dec_indent()
         
         
@@ -257,7 +298,7 @@ class GenCPP(Visitor):
             if ret and i == 0:
                 out_cpp.write(",\n")
             out_cpp.write(out_cpp.ind)
-            out_cpp.write(TypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
+            out_cpp.write(CppTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
             out_cpp.write(p.name + (",\n" if i+1 < len(params) else ""))
             ret = True
         
@@ -370,7 +411,7 @@ class FieldForwardRefGen(Visitor):
         Visitor.visitTypePointer(self, t)
         if t.pt == PointerKind.Shared or t.pt == PointerKind.Unique:
             self.out.write(self.out.ind + "typedef ")
-            self.out.write(TypeNameGen().gen(t))
+            self.out.write(CppTypeNameGen().gen(t))
             self.out.write(" " + GetPointerType().gen(t) + 
                            "UP" if t.pt == PointerKind.Unique else "SP")
             self.out.write(";\n")
@@ -402,86 +443,7 @@ class FieldIncludeGen(Visitor):
             self.seen.add(t.name)
             self.out.println("#include \"" + t.name + ".h\"")           
 
-class TypeNameGen(Visitor):
-    
-    def __init__(self, compressed=False, is_ret=False):
-        self.out = ""
-        self.compressed = compressed
-        self.is_ret = is_ret
-        self.depth = 0
-        
-    def gen(self, t):
-        t.accept(self)
-        return self.out
-    
-    def visitTypeList(self, t):
-        if self.depth == 0:
-            self.depth += 1
-            if self.is_ret:
-                self.out += "const "
-            
-            self.out += "std::vector<"
-            self.out += TypeNameGen(compressed=self.compressed).gen(t.t)
-            self.out += ">"
-        
-            if self.is_ret:
-                self.out += "&"
-            self.depth -= 1
-        else:
-            self.out += TypeNameGen().gen(t)
-            
-        
-    def visitTypePointer(self, t : TypePointer):
-        if self.depth == 0:
-            self.depth += 1
-            if not self.compressed:
-                if t.pt == PointerKind.Shared:
-                    self.out += "std::shared_ptr<"
-                elif t.pt == PointerKind.Unique and not self.is_ret:
-                    self.out += "std::unique_ptr<"
-            Visitor.visitTypePointer(self, t)
-            
-        
-            if t.pt == PointerKind.Shared or t.pt == PointerKind.Unique:
-                if not self.compressed:
-                    if self.is_ret:
-                        if t.pt == PointerKind.Shared:
-                            self.out += ">"
-                        else:
-                            self.out += "*"
-                    else:
-                        self.out += ">"
-                else:
-                    if self.is_ret:
-                        if t.pt == PointerKind.Shared:
-                            self.out += "SP"
-                        else:
-                            self.out += "*"
-                    else:
-                        self.out += "SP" if t.pt == PointerKind.Shared else "UP"
-            else:
-                self.out += " *"
-            self.depth -= 1
-        else:
-            self.out += TypeNameGen().gen(t)
 
-    def visitTypeScalar(self, t : TypeScalar):
-        vmap = {
-            TypeKind.String : "std::string",
-            TypeKind.Bool : "bool",
-            TypeKind.Int8: "int8_t",
-            TypeKind.Uint8: "uint8_t",
-            TypeKind.Int16: "int16_t",
-            TypeKind.Uint16: "uint16_t",
-            TypeKind.Int32: "int32_t",
-            TypeKind.Uint32: "uint32_t",
-            TypeKind.Int64: "int64_t",
-            TypeKind.Uint64: "uint64_t",
-            }
-        self.out += vmap[t.t]
-    
-    def visitTypeUserDef(self, t):
-        self.out += t.name
         
 class GetPointerType(Visitor):
     def __init__(self):

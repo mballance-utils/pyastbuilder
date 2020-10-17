@@ -8,11 +8,13 @@ import json
 from astbuilder.ast import Ast
 from astbuilder.ast_class import AstClass
 from astbuilder.ast_data import AstData
+from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 from astbuilder.type_list import TypeList
+from astbuilder.type_map import TypeMap
 from astbuilder.type_pointer import TypePointer, PointerKind
 from astbuilder.type_scalar import TypeScalar, TypeKind
 from astbuilder.type_userdef import TypeUserDef
-from astbuilder.ast_enum import AstEnum
 
 
 class Parser(object):
@@ -32,6 +34,8 @@ class Parser(object):
                 self.parse_classes(doc["classes"])
             elif key == "enums":
                 self.parse_enums(doc["enums"])
+            elif key == "flags":
+                self.parse_flags(doc["flags"])
             else:
                 raise Exception("Unknown section " + key)
             
@@ -114,6 +118,14 @@ class Parser(object):
         elif item.startswith("list<"):
             core_type = item[item.find('<')+1:item.rfind('>')]
             ret = TypeList(self.parse_simple_type(core_type))
+        elif item.startswith("map<"):
+            key_type = item[item.find('<')+1:item.rfind(',')].strip()
+            val_type = item[item.rfind(',')+1:item.rfind('>')].strip()
+            print("key_type: " + key_type)
+            print("val_type: " + val_type)
+            ret = TypeMap(
+                self.parse_simple_type(key_type),
+                self.parse_simple_type(val_type))
         else:
             # Assume a user-defined type
             ret = TypeUserDef(item)
@@ -130,5 +142,14 @@ class Parser(object):
                 ast_e.values.append((e,ev))
             
             self.ast.addEnum(ast_e)
+            
+    def parse_flags(self, flags):
         
+        for f in flags:
+            ast_f = AstFlags(f['name'].strip())
+        
+            for fv in f['values']:
+                ast_f.values.append(fv)
+            
+            self.ast.addFlags(ast_f)
         

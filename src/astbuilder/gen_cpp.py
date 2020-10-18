@@ -25,10 +25,12 @@ class GenCPP(Visitor):
     
     def __init__(self, 
                  outdir, 
+                 name,
                  license,
                  namespace):
         self.outdir = outdir
-        self.license = None
+        self.name = name
+        self.license = license
         self.namespace = namespace
         
         if license is not None:
@@ -43,7 +45,10 @@ class GenCPP(Visitor):
             self.enum_t.add(e.name)
             
         ast.accept(self)
-        GenCppVisitor(self.outdir, self.license).generate(ast)
+        GenCppVisitor(
+            self.outdir, 
+            self.license,
+            self.namespace).generate(ast)
         
         with open(os.path.join(self.outdir, "CMakeLists.txt"), "w") as f:
             f.write(self.gen_cmake(ast))
@@ -138,12 +143,17 @@ class GenCPP(Visitor):
             out_h.println("#include \"" + c.super.name + ".h\"")
             out_h.println()
 
+        if self.namespace is not None:
+            out_cls.println()
+            out_cls.println("namespace " + self.namespace + " {")
+            out_cls.println()
+            
         # Handle dependencies
         for key,d in c.deps.items():
             if isinstance(d.target, AstClass):
-                out_h.println("class " + key + ";")
-                out_h.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
-                out_h.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
+                out_cls.println("class " + key + ";")
+                out_cls.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
+                out_cls.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
             elif isinstance(d.target, AstEnum):
                 out_h.println("#include \"" + key + ".h\"")
             else:
@@ -152,12 +162,6 @@ class GenCPP(Visitor):
 #                out_h.println("#include \"" + key + ".h\"")
 #            else:
 #                raise Exception("TODO: handle circular dependency on " + key)
-
-        if self.namespace is not None:
-            out_cls.println()
-            out_cls.println("namespace " + self.namespace + " {")
-            out_cls.println()
-        
 
         out_cls.println("class " + c.name + ";")
         out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
@@ -361,33 +365,32 @@ class GenCPP(Visitor):
     
     def gen_cmake(self, ast):
         out = OutStream()
-        project = "project"
         out.println("#****************************************************************************")
-        out.println("#* CMakeLists.txt for " + project)
+        out.println("#* CMakeLists.txt for " + self.name)
         out.println("#****************************************************************************")
         out.println()
         out.println("cmake_minimum_required (VERSION 2.8)")
         out.println()
-        out.println("project (" + project + ")")
+        out.println("project (" + self.name + ")")
         out.println()
-        out.println("file(GLOB_RECURSE " + project + "_SRC")
+        out.println("file(GLOB_RECURSE " + self.name + "_SRC")
         out.inc_indent()
         out.println("\"*.h\"")
         out.println("\"*.cpp\"")
         out.dec_indent()
         out.println(")")
         out.println()
-        out.println("add_library(" + project + "_ast ${" + project + "_SRC})")
+        out.println("add_library(" + self.name + " ${" + self.name + "_SRC})")
         out.println()
-        out.println("install(TARGETS " + project + "_ast")
+        out.println("install(TARGETS " + self.name + "")
         out.inc_indent()
         out.println("DESTINATION lib")
-        out.println("EXPORT " + project + "_ast-targets)")
+        out.println("EXPORT " + self.name + "-targets)")
         out.dec_indent()
         out.println()
         out.println("install(DIRECTORY \"${PROJECT_SOURCE_DIR}/\"")
         out.inc_indent()
-        out.println("DESTINATION \"include/" + project + "_ast\"")
+        out.println("DESTINATION \"include/" + self.name + "\"")
         out.println("COMPONENT dev")
         out.println("FILES_MATCHING PATTERN \"*.h\")")
         out.dec_indent()

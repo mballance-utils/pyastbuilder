@@ -28,6 +28,7 @@ def main():
     parser.add_argument("-o")
     parser.add_argument("-license")
     parser.add_argument("-namespace")
+    parser.add_argument("-name")
     
     args = parser.parse_args()
   
@@ -51,12 +52,16 @@ def main():
     if not hasattr(args, "namespace"):
         args.namespace = None
         
+    if not hasattr(args, "name") or args.name is None:
+        args.name = "ast"
+        
         
     if not hasattr(args, "o") or args.o is None:
         args.o = os.getcwd()
 
     gen = GenCPP(
         args.o, 
+        args.name,
         args.license,
         args.namespace)
     

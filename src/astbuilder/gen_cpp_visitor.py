@@ -15,9 +15,13 @@ from astbuilder.type_scalar import TypeScalar
 
 class GenCppVisitor(Visitor):
     
-    def __init__(self, outdir, license):
+    def __init__(self, 
+                 outdir, 
+                 license,
+                 namespace):
         self.outdir = outdir
         self.license = license
+        self.namespace = namespace
         
     def generate(self, ast):
         self.gen_ifc(ast)
@@ -35,6 +39,9 @@ class GenCppVisitor(Visitor):
         out.println("#pragma once")
         out.println()
         
+        if self.namespace is not None:
+            out.println("namespace " + self.namespace + " {")
+        
         out_m.println("class IVisitor {")
         out_m.println("public:")
         out_m.inc_indent()
@@ -50,6 +57,10 @@ class GenCppVisitor(Visitor):
         out_m.println("};")
         
         out.println()
+        
+        if self.namespace is not None:
+            out_m.println("} /* namespace " + self.namespace + " */")
+            out_m.println()
         
         with open(os.path.join(self.outdir, "IVisitor.h"), "w") as fp:
             fp.write(
@@ -71,6 +82,10 @@ class GenCppVisitor(Visitor):
         out_h.println("#include \"IVisitor.h\"")
         out_h.println()
         
+        if self.namespace is not None:
+            out_h_c.println("namespace " + self.namespace + " {")
+            out_h_c.println()
+        
         out_h_c.println("class BaseVisitor : public virtual IVisitor {")
         out_h_c.println("public:")
         out_h_c.inc_indent()
@@ -86,6 +101,11 @@ class GenCppVisitor(Visitor):
         out_cpp.println(" ****************************************************************************/")
         out_cpp.println("#include \"BaseVisitor.h\"")
         out_cpp.println()
+        
+        if self.namespace is not None:
+            out_cpp.println("namespace " + self.namespace + " {")
+            out_cpp.println()
+            
         out_cpp.println("BaseVisitor::BaseVisitor() {")
         out_cpp.println()
         out_cpp.println("}")
@@ -112,6 +132,13 @@ class GenCppVisitor(Visitor):
         out_h.println()
         out_h_c.dec_indent()
         out_h_c.println("};")
+        out_h_c.println()
+        
+        if self.namespace is not None:
+            out_h_c.println("} /* namespace " + self.namespace + " */")
+            out_h_c.println()
+            out_cpp.println("} /* namespace " + self.namespace + " */")
+            out_cpp.println()
         
         with open(os.path.join(self.outdir, "BaseVisitor.h"), "w") as fp:
             fp.write(

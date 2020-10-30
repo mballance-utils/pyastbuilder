@@ -19,6 +19,7 @@ from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
 
 from .cpp_type_name_gen import CppTypeNameGen
+from astbuilder.type_map import TypeMap
 
 
 class GenCPP(Visitor):
@@ -202,6 +203,7 @@ class GenCPP(Visitor):
                 out_cls.println("return m_" + f.name + ";")
             out_cls.dec_indent()
             out_cls.println("}")
+            out_cls.println()
             
             # Non-const accessor
             out_cls.println(
@@ -214,6 +216,12 @@ class GenCPP(Visitor):
                 out_cls.println("return m_" + f.name + ";")
             out_cls.dec_indent()
             out_cls.println("}")
+            out_cls.println()
+            
+            # Setter
+            if not isinstance(f.t, (TypeList,TypeMap)):
+                out_cls.println("void " + f.name + "(" + CppTypeNameGen(compressed=True,is_ret=True,is_const=False).gen(f.t) + " v);")
+                out_cls.println()
 
             # TODO: Generate an accessor for adding list elements            
             # TODO: Generate an accessor for accessing individual elements            
@@ -283,6 +291,24 @@ class GenCPP(Visitor):
         out_cpp.println(c.name + "::~" + c.name + "() {")
         out_cpp.println()
         out_cpp.println("}")
+        
+        for f in c.data:
+            if not isinstance(f.t, (TypeList,TypeMap)):
+            
+                # Setter
+                out_cpp.println("void " + c.name + ":: " + f.name + "(" + CppTypeNameGen(compressed=True,is_ret=True,is_const=False).gen(f.t) + 
+                            " v) {")
+                out_cpp.inc_indent()
+             
+                # Return the raw pointer held by a unique pointer. Return everything else by value
+                if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
+                    out_cpp.println("m_" + f.name + " = " + 
+                                CppTypeNameGen(compressed=True).gen(f.t) + "(v);")
+                else:
+                    out_cpp.println("m_" + f.name + " = v;")
+                out_cpp.dec_indent()
+                out_cpp.println("}")
+                out_cpp.println()        
         
         if self.namespace is not None:
             out_cpp.println()

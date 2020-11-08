@@ -11,10 +11,14 @@ class CppTypeNameGen(Visitor):
     def __init__(self, 
                  compressed=False, 
                  is_ret=False,
+                 is_ref=False,
+                 is_ptr=False,
                  is_const=False):
         self.out = ""
         self.compressed = compressed
         self.is_ret = is_ret
+        self.is_ref = is_ref
+        self.is_ptr = is_ptr
         self.is_const = is_const
         self.depth = 0
         
@@ -33,7 +37,7 @@ class CppTypeNameGen(Visitor):
             self.out += ">"
         
             if self.is_ret:
-                self.out += "&"
+                self.out += " &"
             self.depth -= 1
         else:
             self.out += CppTypeNameGen().gen(t)
@@ -51,7 +55,7 @@ class CppTypeNameGen(Visitor):
             self.out += ">"
         
             if self.is_ret:
-                self.out += "&"
+                self.out += " &"
             self.depth -= 1
         else:
             self.out += CppTypeNameGen().gen(t)            
@@ -103,7 +107,19 @@ class CppTypeNameGen(Visitor):
             TypeKind.Int64: "int64_t",
             TypeKind.Uint64: "uint64_t",
             }
+        if self.is_const:
+            self.out += "const "
         self.out += vmap[t.t]
+        if self.is_ref:
+            self.out += " &"
     
     def visitTypeUserDef(self, t):
+        if self.is_const:
+            self.out += "const "
         self.out += t.name
+        if self.is_ptr:
+            self.out += " *"
+        if self.is_ref:
+            self.out += " &"
+        
+        

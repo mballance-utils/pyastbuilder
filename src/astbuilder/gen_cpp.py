@@ -19,6 +19,7 @@ from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
 
 from .cpp_type_name_gen import CppTypeNameGen
+from astbuilder.cpp_accessor_gen import CppAccessorGen
 
 
 class GenCPP(Visitor):
@@ -54,17 +55,22 @@ class GenCPP(Visitor):
             f.write(self.gen_cmake(ast))
     
     def visitAstClass(self, c : AstClass):
-        h = self.define_class_h(c)
-        cpp = self.define_class_cpp(c)
+        h = OutStream()
+        cpp = OutStream()
+        
+        self.define_class(c, h, cpp)
+        
+#        h = self.define_class_h(c)
+#        cpp = self.define_class_cpp(c)
         
         if not os.path.isdir(self.outdir):
             os.makedirs(self.outdir)
 
         with open(os.path.join(self.outdir, c.name + ".h"), "w") as f:
-            f.write(h)
+            f.write(h.content())
             
         with open(os.path.join(self.outdir, c.name + ".cpp"), "w") as f:
-            f.write(cpp)
+            f.write(cpp.content())
             
     def visitAstEnum(self, e:AstEnum):
         out_h = OutStream()
@@ -119,9 +125,191 @@ class GenCPP(Visitor):
         
         with open(os.path.join(self.outdir, f.name + ".h"), "w") as f:
             f.write(out_h.content())
+            
+    def define_class(self, c, out_h, out_cpp):
+        # Class body output stream
+        out_cls = OutStream()
+
+        #************************************************************
+        #* Beginning of the header file        
+        #************************************************************
+        out_h.println("/****************************************************************************")
+        out_h.println(" * " + c.name + ".h")
+        if self.license is not None:
+            out_h.write(self.license)
+        out_h.println(" ****************************************************************************/")
+        out_h.println("#pragma once")
+        out_h.println("#include <stdint.h>")
+        out_h.println("#include <map>")
+        out_h.println("#include <memory>")
+        out_h.println("#include <set>")
+        out_h.println("#include <string>")
+        out_h.println("#include <vector>")
+        out_h.println("#include \"IVisitor.h\"") 
+        
+        if c.super is not None:
+            out_h.println("#include \"" + c.super.name + ".h\"")
+            out_h.println()
+
+        if self.namespace is not None:
+            out_cls.println()
+            out_cls.println("namespace " + self.namespace + " {")
+            out_cls.println()
+            
+        # Handle dependencies
+        for key,d in c.deps.items():
+            if isinstance(d.target, AstClass):
+                out_cls.println("class " + key + ";")
+                out_cls.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
+                out_cls.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
+            elif isinstance(d.target, AstEnum):
+                out_h.println("#include \"" + key + ".h\"")
+            else:
+                raise Exception("Unknown ref " + str(d.target))
+
+        out_cls.println("class " + c.name + ";")
+        out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
+        out_cls.println("typedef std::shared_ptr<" + c.name + "> " + c.name + "SP;")
+        out_cls.println()
+        out_cls.println("#ifdef _WIN32")
+        out_cls.println("#ifdef DLLEXPORT")
+        out_cls.println("__declspec(dllexport)")
+        out_cls.println("#endif")
+        out_cls.println("#endif /* _WIN32 */")
+        out_cls.write("class " + c.name)
+        
+        if c.super is not None:
+            out_cls.write(" : public " + c.super.name)
+        out_cls.write(" {\n")
+        out_cls.write("public:\n")
+        out_cls.inc_indent()
+        out_cls.println(c.name + "(");
+        out_cls.inc_indent()
+        self.gen_ctor_params(c, out_cls)
+        out_cls.println(");");
+        out_cls.dec_indent()
+        
+        out_cls.println();
+        out_cls.println("virtual ~" + c.name + "();");
+        out_cls.println();
+        
+            
+#             # Const accessor
+#             out_cls.println(
+#                 CppTypeNameGen(compressed=True,is_ret=True,is_const=True).gen(f.t) + " " + f.name + "() const {")
+#             out_cls.inc_indent()
+#             # Return the raw pointer held by a unique pointer. Return everything else by value
+#             if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
+#                 out_cls.println("return m_" + f.name + ".get();")
+#             else:
+#                 out_cls.println("return m_" + f.name + ";")
+#             out_cls.dec_indent()
+#             out_cls.println("}")
+#             
+#             # Non-const accessor
+#             out_cls.println(
+#                 CppTypeNameGen(compressed=True,is_ret=True,is_const=False).gen(f.t) + " " + f.name + "() {")
+#             out_cls.inc_indent()
+#             # Return the raw pointer held by a unique pointer. Return everything else by value
+#             if isinstance(f.t, TypePointer) and f.t.pt == PointerKind.Unique:
+#                 out_cls.println("return m_" + f.name + ".get();")
+#             else:
+#                 out_cls.println("return m_" + f.name + ";")
+#             out_cls.dec_indent()
+#             out_cls.println("}")
+# 
+#             # TODO: Generate an accessor for adding list elements            
+#             # TODO: Generate an accessor for accessing individual elements            
+            
+
+            
+
+        #************************************************************
+        #* Beginning of the C++ file        
+        #************************************************************
+        out_cpp.println("/****************************************************************************")
+        out_cpp.println(" * " + c.name + ".cpp")
+        if self.license is not None:
+            out_cpp.write(self.license)
+        out_cpp.println(" ****************************************************************************/")
+        out_cpp.println("#include \"" + c.name + ".h\"")
+        out_cpp.println()
+        # Include files needed for circular dependencies
+        for key,d in c.deps.items():
+            out_cpp.println("#include \"" + key + ".h\"")
+                
+        out_cpp.println()
+        
+        if self.namespace is not None:
+            out_cpp.println("namespace " + self.namespace + " {")
+            out_cpp.println()
+            
+        out_cpp.println(c.name + "::" + c.name + "(")
+        
+        out_cpp.inc_indent()
+        self.gen_ctor_params(c, out_cpp)
+        out_cpp.write(")")
+        self.gen_ctor_init(c, out_cpp)
+        out_cpp.dec_indent()
+        
+        out_cpp.println("{\n")
+ 
+
+        # Assign fields that are non-parameter and have defaults            
+        out_cpp.inc_indent()
+        for d in filter(lambda d:d.init is not None, c.data):
+            out_cpp.println("m_" + d.name + " = " + d.init + ";")
+        out_cpp.dec_indent()
+            
+        # TODO: assignments
+        out_cpp.println("}")
+        out_cpp.println()
+        out_cpp.println(c.name + "::~" + c.name + "() {")
+        out_cpp.println()
+        out_cpp.println("}")
+        
+        # Field accessors. Content goes both in .h and .cpp files
+        out_cpp.println()
+        out_cls.println()
+        
+        accessor_gen = CppAccessorGen(out_cls, out_cpp, c.name)
+        for i,f in enumerate(c.data):
+            if i > 0:
+                out_cls.println()
+                out_cpp.println()
+            accessor_gen.gen(f)
+            
+        out_cls.println()
+        out_cpp.println()
+
+
+        # Wrap up class-content generation
+        out_cls.println("virtual void accept(IVisitor *v) { v->visit" + c.name + "(this);}")
+        
+        out_cls.dec_indent()
+        out_cls.println();
+        out_cls.println("private:\n")
+        out_cls.inc_indent()
+        for f in c.data:
+            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name + ";")
+        out_cls.dec_indent()
+        
+        out_cls.write("};\n")
+        
+        if self.namespace is not None:
+            out_cls.println()
+            out_cls.println("} /* namespace " + self.namespace + " */")
+            out_cls.println()
+                    
+        if self.namespace is not None:
+            out_cpp.println()
+            out_cpp.println("} /* namespace " + self.namespace + " */")
+
+        out_h.write(out_cls.content())
+                
+        pass
         
     def define_class_h(self, c):
-        out_inc = OutStream()
         out_cls = OutStream()
         
         out_h = OutStream()
@@ -190,7 +378,15 @@ class GenCPP(Visitor):
         out_cls.println();
         
         # Field accessors
+        CppAccessorGen(out_cls, out_cpp)
         for f in c.data:
+            # If the data is a collection (list, map), we need:
+            # - const accessor
+            # - non-const accessor
+            #
+            # If the data is scalar 
+
+            
             # Const accessor
             out_cls.println(
                 CppTypeNameGen(compressed=True,is_ret=True,is_const=True).gen(f.t) + " " + f.name + "() const {")

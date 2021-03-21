@@ -10,13 +10,13 @@ from astbuilder.gen_cpp import GenCPP
 from astbuilder.ast import Ast
 from astbuilder.linker import Linker
 
-def find_json_files(path):
+def find_yaml_files(path):
     ret = []
     if not os.path.isdir(path):
         raise Exception("Directory " + path + " doesn't exist")
     for f in os.listdir(path):
         print("File: " + f)
-        if os.path.splitext(f)[1] == ".json":
+        if os.path.splitext(f)[1] == ".yaml":
             ret.append(os.path.join(path, f))
             print("Found file " + f)
     return ret
@@ -33,12 +33,12 @@ def main():
     args = parser.parse_args()
   
     # Find the AST source files
-    json_files = []    
+    yaml_files = []    
     for d in args.astdir:
-        json_files.extend(find_json_files(d))
+        yaml_files.extend(find_yaml_files(d))
 
     ast = Ast()        
-    for file in json_files:
+    for file in yaml_files:
         ast = Parser(ast).parse(file)
         
     Linker().link(ast)

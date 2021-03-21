@@ -6,8 +6,8 @@ Created on Sep 12, 2020
 
 class AstClass(object):
     
-    def __init__(self):
-        self.name = None
+    def __init__(self, name):
+        self.name = name
         self.super = None
         self.data = []
         

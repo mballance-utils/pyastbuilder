@@ -3,7 +3,7 @@ Created on Sep 12, 2020
 
 @author: ballance
 '''
-import json
+import yaml
 
 from astbuilder.ast import Ast
 from astbuilder.ast_class import AstClass
@@ -15,6 +15,7 @@ from astbuilder.type_map import TypeMap
 from astbuilder.type_pointer import TypePointer, PointerKind
 from astbuilder.type_scalar import TypeScalar, TypeKind
 from astbuilder.type_userdef import TypeUserDef
+from astbuilder import ast_class
 
 
 class Parser(object):
@@ -24,10 +25,8 @@ class Parser(object):
         pass
     
     def parse(self, file):
-        with open(file, "r") as fp:
-            content = fp.read()
-            
-        doc = json.loads(content)
+        with open(file) as f:
+            doc = yaml.load(f, Loader=yaml.FullLoader)            
         
         for key in doc.keys():
             if key == "classes":
@@ -42,22 +41,32 @@ class Parser(object):
         return self.ast
     
     def parse_classes(self, classes):
-        if not isinstance(classes, list):
-            raise Exception("Expect classes to be a list")
+        if classes is not None:
+            if not isinstance(classes, list):
+                raise Exception("Expect classes to be a list, not " + str(type(classes)) + " " + str(classes))
         
-        for e in classes:
-            self.ast.addClass(self.parse_class(e))
+            for e in classes:
+                self.ast.addClass(self.parse_class(e))
             
     def parse_class(self, cls):
-        ast_cls = AstClass()
-        
-        for key in cls.keys():
-            if key == "name":
-                ast_cls.name = cls[key].strip()
-            elif key == "super":
-                ast_cls.super = TypeUserDef(cls[key].strip())
-            elif key == "data":
-                self.parse_class_data(ast_cls, cls[key])
+
+        if isinstance(cls, str):
+            ast_cls = AstClass(cls)
+        elif isinstance(cls, dict):
+            ast_cls = AstClass(next(iter(cls)))
+            if ast_cls.name is None:
+                raise Exception("Failed to get name from cls " + str(cls))
+            if cls[ast_cls.name] is not None:
+                for elem in cls[ast_cls.name]:
+                    key = next(iter(elem))
+                    if key == "super":
+                        ast_cls.super = TypeUserDef(elem[key])
+                    elif key == "data":
+                        self.parse_class_data(ast_cls, elem[key])
+                    else:
+                        raise Exception("Unknown class key " + str(key))
+        else:
+            raise Exception("Unknown class entity type " + str(cls))
                 
         if ast_cls.name is None:
             raise Exception("No name provided for class")
@@ -66,24 +75,36 @@ class Parser(object):
                 
     def parse_class_data(self, ast_cls, data):
         
-        for key in data.keys():
+        for elem in data:
+            name = next(iter(elem))
+            t = None
             is_ctor = True
             init = None
-            item = data[key]
+            item = elem[name]
+            
             if isinstance(item, str):
                 # Simple type signature
                 t = self.parse_simple_type(item)
-            elif isinstance(item, dict):
-                t = self.parse_simple_type(item['type'])
-                if 'is_ctor' in item.keys():
-                    is_ctor = bool(item['is_ctor'])
-                if 'init' in item.keys():
-                    init = str(item['init'])
+            elif isinstance(item, list):
+                # YAML packs as list of dicts
+                for it in item:
+                    key = next(iter(it))
+                    if key == "type":
+                        t = self.parse_simple_type(it[key])
+                    elif key == "is_ctor":
+                        is_ctor = bool(it['is_ctor'])
+                    elif key == "init":
+                        init = str(it['init'])
+                    else:
+                        raise Exception("Unknown data-item key " + key)
+                    
+                if t is None:
+                    raise Exception("No type specified for field " + name)
             else:
                 raise Exception("Unknown type signature")
 
             is_ctor &= not isinstance(t, TypeList)
-            d = AstData(key, t, is_ctor)
+            d = AstData(name, t, is_ctor)
             d.init = init
             ast_cls.data.append(d)
 
@@ -102,7 +123,7 @@ class Parser(object):
             "uint64_t" : TypeScalar(TypeKind.Uint64),
             "int64_t" : TypeScalar(TypeKind.Int64)
             }
-       
+        
         if item in primitive_m.keys():
             ret = primitive_m[item]
         elif item.startswith("SP<"):
@@ -135,21 +156,29 @@ class Parser(object):
     def parse_enums(self, enums):
         
         for enum in enums:
-            ast_e = AstEnum(enum['name'].strip())
-        
-            for e in enum['values'].keys():
-                ev = enum['values'][e]
-                ast_e.values.append((e,ev))
+            print("enum: " + str(enum))
+#            ast_e = AstEnum(enum['name'].strip())
+            ast_e = AstEnum(next(iter(enum.keys())))
+
+            # TODO: what about specific values        
+            for e in enum[ast_e.name]:
+#                ev = enum['values'][e]
+                ast_e.values.append((e,None))
             
             self.ast.addEnum(ast_e)
             
     def parse_flags(self, flags):
         
         for f in flags:
-            ast_f = AstFlags(f['name'].strip())
+            ast_f = AstFlags(next(iter(f)))
         
-            for fv in f['values']:
-                ast_f.values.append(fv)
+            for fv in f[ast_f.name]:
+                if isinstance(fv, str):
+                    ast_f.values.append(fv)
+                elif isinstance(fv, dict):
+                    ast_f.values.append(next(iter(fv)))
+                else:
+                    raise Exception("Unknown flags entry: " + str(fv))
             
             self.ast.addFlags(ast_f)
         

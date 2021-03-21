@@ -14,7 +14,7 @@ setup(
   package_dir = {'' : 'src'},
   author = "Matthew Ballance",
   author_email = "matt.ballance@gmail.com",
-  description = ("Utility for generating AST classes from a json description"),
+  description = ("Utility for generating AST classes from a yaml description"),
   license = "Apache 2.0",
   keywords = ["Parsing"],
   url = "https://github.com/mballance/pyastbuilder",
@@ -27,6 +27,7 @@ setup(
     'setuptools_scm'
   ],
   install_requires=[
+      'pyyaml'
   ],
 )
 

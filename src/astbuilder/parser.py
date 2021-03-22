@@ -24,9 +24,8 @@ class Parser(object):
         self.ast = ast
         pass
     
-    def parse(self, file):
-        with open(file) as f:
-            doc = yaml.load(f, Loader=yaml.FullLoader)            
+    def parse(self, f):
+        doc = yaml.load(f, Loader=yaml.FullLoader)            
         
         for key in doc.keys():
             if key == "classes":

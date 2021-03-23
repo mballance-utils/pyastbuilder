@@ -19,8 +19,10 @@ class PyExtAccessorGen(Visitor):
     #
     #
     
-    def __init__(self, pxd, pyx):
+    def __init__(self, name, clsname, pxd, pyx):
         super().__init__()
+        self.name = name
+        self.clsname = clsname
         self.pxd = pxd
         self.pyx = pyx
         self.field = None
@@ -58,6 +60,12 @@ class PyExtAccessorGen(Visitor):
 
         # Generate a non-const accessor
         self.pxd.println(self.nonconst_ref_ret(t) + "get_" + self.field.name + "();")
+        
+#         self.pyx.println("cdef %s get_%s():" % (self.nonconst_ref_ret(t), self.field.name))
+#         self.pyx.inc_indent()
+#         self.pyx.println("return (<%s_decl.%s *>self.thisptr).get_%s()" %
+#                          (self.name, self.clsname, self.field.name))
+#         self.pyx.dec_indent()
 
    
     def gen_scalar_accessors(self, t):
@@ -66,6 +74,13 @@ class PyExtAccessorGen(Visitor):
             PyExtTypeNameGen(compressed=True,is_ret=True).gen(t) + 
             " get_" + self.field.name + "()")
         self.pxd.println()
+        
+        self.pyx.println("cdef %s get_%s(self):" % 
+                         (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), self.field.name))
+        self.pyx.inc_indent()
+        self.pyx.println("return (<%s_decl.%s *>self.thisptr).get_%s()" % 
+                         (self.name, self.clsname, self.field.name))
+        self.pyx.dec_indent()
 
         # Generate a non-const accessor
         self.pxd.println("void set_" + self.field.name + "(" +
@@ -110,6 +125,14 @@ class PyExtAccessorGen(Visitor):
             PyExtTypeNameGen(compressed=True,is_ref=True,is_const=True).gen(t) + 
             "get_" + self.field.name + "()")
         self.pxd.println()
+
+        self.pyx.println("cdef %s get_%s(self):" % (
+            PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t),
+            self.field.name))
+        self.pyx.inc_indent()
+        self.pyx.println("return (<%s_decl.%s *>self.thisptr).get_%s()" %
+                         (self.name, self.clsname, self.field.name))
+        self.pyx.dec_indent()
 
         # Generate a setter
         self.pxd.println("void set_" + self.field.name + "(" +

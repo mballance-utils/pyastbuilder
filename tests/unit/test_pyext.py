@@ -25,6 +25,7 @@ class TestPyExt(BaseTest):
             - super: c1
             - data:
                 - f3: string
+                - f4: int32_t
                 - children: list<UP<c1>>
         """
         

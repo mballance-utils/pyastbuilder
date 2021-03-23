@@ -54,11 +54,11 @@ class CppAccessorGen(Visitor):
     
     def gen_collection_accessors(self, t):
         # Generate a read-only accessor
-        self.out_h.println(self.const_ref_ret(t) + self.field.name + "() const;")
+        self.out_h.println(self.const_ref_ret(t) + "get_" + self.field.name + "() const;")
         self.out_h.println()
 
         self.out_cpp.println(self.const_ref_ret(t) + 
-                             self.clsname + "::" + self.field.name + "() const {")
+                             self.clsname + "::get_" + self.field.name + "() const {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -66,10 +66,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a non-const accessor
-        self.out_h.println(self.nonconst_ref_ret(t) + self.field.name + "();")
+        self.out_h.println(self.nonconst_ref_ret(t) + "get_" + self.field.name + "();")
 
         self.out_cpp.println(self.nonconst_ref_ret(t) + 
-                             self.clsname + "::" + self.field.name + "() {")
+                             self.clsname + "::get_" + self.field.name + "() {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -79,12 +79,12 @@ class CppAccessorGen(Visitor):
         # Generate a read-only accessor
         self.out_h.println(
             CppTypeNameGen(compressed=True,is_ret=True).gen(t) + 
-            " " + self.field.name + "() const;")
+            " get_" + self.field.name + "() const;")
         self.out_h.println()
 
         self.out_cpp.println(
             CppTypeNameGen(compressed=True,is_ret=True).gen(t) + 
-                             " " + self.clsname + "::" + self.field.name + "() const {")
+                             " " + self.clsname + "::get_" + self.field.name + "() const {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -92,10 +92,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a non-const accessor
-        self.out_h.println("void " + self.field.name + "(" +
+        self.out_h.println("void set_" + self.field.name + "(" +
             CppTypeNameGen(compressed=True,is_ret=False).gen(t) + " v);")
 
-        self.out_cpp.println("void " + self.clsname + "::" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
                 "(" + CppTypeNameGen(compressed=True,is_ret=False).gen(t) + " v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = v;")
@@ -106,12 +106,12 @@ class CppAccessorGen(Visitor):
         # Generate a read-only accessor
         self.out_h.println(
             CppTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t) + 
-            self.field.name + "();")
+            "get_" + self.field.name + "();")
         self.out_h.println()
 
         self.out_cpp.println(
             CppTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + 
-                            self.clsname + "::" + self.field.name + "() {")
+                            self.clsname + "::get_" + self.field.name + "() {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -119,10 +119,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a setter
-        self.out_h.println("void " + self.field.name + "(" +
+        self.out_h.println("void set_" + self.field.name + "(" +
             CppTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v);")
 
-        self.out_cpp.println("void " + self.clsname + "::" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
                 "(" + CppTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = v;")
@@ -133,12 +133,12 @@ class CppAccessorGen(Visitor):
         # Generate a read-only accessor
         self.out_h.println(
             CppTypeNameGen(compressed=True,is_ptr=True,is_const=False).gen(t.t) + 
-            self.field.name + "() const;")
+            "get_" + self.field.name + "() const;")
         self.out_h.println()
 
         self.out_cpp.println(
             CppTypeNameGen(compressed=True,is_ptr=True,is_const=False).gen(t.t) + 
-                            self.clsname + "::" + self.field.name + "() const {")
+                            self.clsname + "::get_" + self.field.name + "() const {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ".get();")
         self.out_cpp.dec_indent()
@@ -146,10 +146,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a setter
-        self.out_h.println("void " + self.field.name + "(" +
+        self.out_h.println("void set_" + self.field.name + "(" +
             CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v);")
 
-        self.out_cpp.println("void " + self.clsname + "::" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
                 "(" + CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = " + 
@@ -160,13 +160,13 @@ class CppAccessorGen(Visitor):
     def gen_sptr_accessors(self, t):
         # Generate a read-only accessor
         self.out_h.println(
-            CppTypeNameGen(compressed=True).gen(t) + " " + 
+            CppTypeNameGen(compressed=True).gen(t) + " get_" + 
             self.field.name + "() const;")
         self.out_h.println()
 
         self.out_cpp.println(
             CppTypeNameGen(compressed=True).gen(t) + 
-                            " " + self.clsname + "::" + self.field.name + "() const {")
+                            " " + self.clsname + "::get_" + self.field.name + "() const {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -174,10 +174,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a setter
-        self.out_h.println("void " + self.field.name + "(" +
+        self.out_h.println("void set_" + self.field.name + "(" +
             CppTypeNameGen(compressed=True).gen(t) + " v);")
 
-        self.out_cpp.println("void " + self.clsname + "::" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
                 "(" + CppTypeNameGen(compressed=True).gen(t) + " v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = v;")
@@ -188,12 +188,12 @@ class CppAccessorGen(Visitor):
         # Generate a read-only accessor
         self.out_h.println(
             CppTypeNameGen(compressed=True,is_ref=True,is_const=True).gen(t) + 
-            self.field.name + "() const;")
+            "get_" + self.field.name + "() const;")
         self.out_h.println()
 
         self.out_cpp.println(
             CppTypeNameGen(compressed=True,is_const=True,is_ref=True).gen(t) + 
-                            self.clsname + "::" + self.field.name + "() const {")
+                            self.clsname + "::get_" + self.field.name + "() const {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("return m_" + self.field.name + ";")
         self.out_cpp.dec_indent()
@@ -201,10 +201,10 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println()
         
         # Generate a setter
-        self.out_h.println("void " + self.field.name + "(" +
+        self.out_h.println("void set_" + self.field.name + "(" +
             CppTypeNameGen(compressed=True,is_const=True,is_ref=True).gen(t) + "v);")
 
-        self.out_cpp.println("void " + self.clsname + "::" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
                 "(" + CppTypeNameGen(compressed=True,is_const=True,is_ref=True).gen(t) + "v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = v;")

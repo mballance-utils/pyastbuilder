@@ -21,7 +21,8 @@ class BaseTest(TestCase):
             "rundir",
             self.id())
         print("testdir: " + self.testdir)
-        shutil.rmtree(self.testdir)
+        if os.path.isdir(self.testdir):
+            shutil.rmtree(self.testdir)
         os.makedirs(self.testdir)
         
     def tearDown(self):

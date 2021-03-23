@@ -75,11 +75,11 @@ class Parser(object):
     def parse_class_data(self, ast_cls, data):
         
         for elem in data:
-            name = next(iter(elem))
+            name = next(iter(elem)).strip()
             t = None
             is_ctor = True
             init = None
-            item = elem[name]
+            item = elem[name].strip()
             
             if isinstance(item, str):
                 # Simple type signature

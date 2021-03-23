@@ -14,6 +14,7 @@ import os
 from astbuilder.pyext_gen_pxd import PyExtGenPxd
 from astbuilder.pyext_gen_extdef import PyExtGenExtDef
 from astbuilder.pyext_gen_pyx import PyExtGenPyx
+from astbuilder.pyext_gen_visitor import PyExtGenVisitor
 
 
 class PyExtGen(Visitor):
@@ -29,11 +30,38 @@ class PyExtGen(Visitor):
         self.namespace = namespace
 
     def generate(self, ast):
-        PyExtGenPyx(self.outdir, self.name, self.namespace).gen(ast)            
+        pxd = OutStream()
+        pyx = OutStream()
+        cpp = OutStream()
+        hpp = OutStream()
+        
+        PyExtGenPyx(
+            self.outdir, 
+            self.name, 
+            self.namespace,
+            pxd,
+            pyx).gen(ast)
+            
+        PyExtGenVisitor(
+            self.name,
+            self.namespace,
+            pxd,
+            pyx,
+            cpp,
+            hpp).gen(ast)
             
         with open(os.path.join(self.outdir, self.name + "_ext.py"), "w") as f:
             f.write(PyExtGenExtDef(self.name).gen(ast))
-    
+            
+        with open(os.path.join(self.outdir, "%s_decl.pxd" % self.name), "w") as f:
+            f.write(pxd.content())
+            
+        with open(os.path.join(self.outdir, "%s.pyx" % self.name), "w") as f:
+            f.write(pyx.content())
+   
+        with open(os.path.join(self.outdir, "PyBaseVisitor.h"), "w") as f:
+            f.write(hpp.content())
+            
+        with open(os.path.join(self.outdir, "PyBaseVisitor.cpp"), "w") as f:
+            f.write(cpp.content())
 
-        
-        

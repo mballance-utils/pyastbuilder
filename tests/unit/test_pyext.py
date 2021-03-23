@@ -11,6 +11,8 @@ from astbuilder.outstream import OutStream
 from astbuilder.gen_cpp import GenCPP
 from astbuilder.pyext_gen import PyExtGen
 import os
+import subprocess
+import sys
 
 class TestPyExt(BaseTest):
     
@@ -39,13 +41,13 @@ from Cython.Build import cythonize
 setup_dir=os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(setup_dir, "ext"))
 
-import ast_ext
+import testast_ext
 
 
 VERSION="0.0.1"
 PLATFORMS = "Any"
 
-ext = ast_ext.ext()
+ext = testast_ext.ext()
 
 for e in dir(ext):
     print("e: " + str(e))
@@ -73,16 +75,47 @@ setup(
         
         astdir = os.path.join(self.testdir, "ast")
         os.makedirs(astdir)
-        
-        GenCPP(astdir, "ast", None, None).generate(ast)
+       
+        name = "testast"
+        GenCPP(astdir, name, None, None).generate(ast)
         
         extdir = os.path.join(self.testdir, "ext")
         os.makedirs(extdir)
         
-        PyExtGen(extdir, "ast", None, None).generate(ast)
+        PyExtGen(extdir, name, None, None).generate(ast)
         
         with open(os.path.join(self.testdir, "setup.py"), "w") as f:
             f.write(setup_py)
 
+        ret = subprocess.call(
+#            args=sys.executable + " setup.py build_ext --inplace",
+            [sys.executable, "setup.py", "build_ext", "--inplace"],
+            cwd=self.testdir
+            )
+        self.assertEqual(ret, 0)
+        
+        sys.path.insert(0, self.testdir)
+        import testast
+        
+        for e in dir(testast):
+            print("e: " + str(e))
+        
+        c2_i = testast.c2.create(1, False, "abc".encode(), 4)
+        for e in dir(c2_i):
+            print("e: " + str(e))
+        print("f3=" + c2_i.get_f3().decode())
+        self.assertEqual(c2_i.get_f3().decode(), "abc")
+        
+        class MyVisitor(testast.BaseVisitor):
+            
+            def __init__(self):
+                super().__init__()
+                
+            def visitc2(self, i):
+                print("visitc2")
+                
+        v = MyVisitor()
+        c2_i.accept(v)
+                
         
         

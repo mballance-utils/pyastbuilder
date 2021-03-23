@@ -17,14 +17,18 @@ class PyExtGenPyx(Visitor):
     def __init__(self,
                  outdir,
                  name, 
-                 namespace):
+                 namespace,
+                 pxd,
+                 pyx):
         self.outdir = outdir
         self.name = name
         self.namespace = namespace
+        self.pxd = pxd
+        self.pyx = pyx
         
     def gen(self, ast):
-        self.pyx = OutStream()
-        self.pxd = OutStream()
+        
+        self.pyx.println("# cython: language_level=3")
         
         self.gen_defs(self.pxd)
         self.gen_defs(self.pyx)
@@ -33,11 +37,6 @@ class PyExtGenPyx(Visitor):
         
         ast.accept(self)
         
-        with open(os.path.join(self.outdir, "%s_decl.pxd" % self.name), "w") as f:
-            f.write(self.pxd.content())
-            
-        with open(os.path.join(self.outdir, "%s.pyx" % self.name), "w") as f:
-            f.write(self.pyx.content())
     
     def gen_defs(self, out):
         out.println("from libcpp.string cimport string as      std_string")
@@ -47,6 +46,8 @@ class PyExtGenPyx(Visitor):
         out.println("from libcpp.vector cimport vector as std_vector")
         out.println("from libcpp.utility cimport pair as  std_pair")
         out.println("from libcpp cimport bool as          bool")
+        out.println("cimport cpython.ref as cpy_ref")
+
 
         out.println("ctypedef char                 int8_t")
         out.println("ctypedef unsigned char        uint8_t")
@@ -120,7 +121,12 @@ class PyExtGenPyx(Visitor):
             self.pyx.dec_indent()
             self.pyx.dec_indent()
             self.pyx.println()
-        
+            
+            self.pyx.println("cpdef void accept(self, BaseVisitor v):")
+            self.pyx.inc_indent()
+            self.pyx.println("self.thisptr.accept(v.thisptr)")
+            self.pyx.dec_indent()
+            
         self.pyx.println("@staticmethod")
         self.pyx.println("cdef %s wrap(%s_decl.%s *thisptr):" % (c.name, self.name, c.name))
         self.pyx.inc_indent()
@@ -164,6 +170,9 @@ class PyExtGenPyx(Visitor):
                 PyExtAccessorGen(self.name, c.name, self.pxd, self.pyx).gen(d)
         else:
             self.pyd.println("pass")
+            
+        if c.super is None:
+            self.pxd.println("void accept(BaseVisitor *v)")
             
         self.pxd.dec_indent()
         self.pyx.dec_indent()

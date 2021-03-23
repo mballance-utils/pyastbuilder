@@ -25,7 +25,7 @@ class PyExtGenExtDef(object):
         self.out.inc_indent()
         self.out.inc_indent()
         # TODO: list files and patterns
-        self.out.println("os.path.join(extdir, '%s.pyx')" % self.name)
+        self.out.println("os.path.join(extdir, '%s.pyx'), os.path.join(extdir, 'PyBaseVisitor.cpp')" % self.name)
         self.out.dec_indent()
         self.out.println("],")
         self.out.println("include_dirs=[extdir],")

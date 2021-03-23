@@ -75,7 +75,7 @@ class PyExtAccessorGen(Visitor):
             " get_" + self.field.name + "()")
         self.pxd.println()
         
-        self.pyx.println("cdef %s get_%s(self):" % 
+        self.pyx.println("cpdef %s get_%s(self):" % 
                          (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), self.field.name))
         self.pyx.inc_indent()
         self.pyx.println("return (<%s_decl.%s *>self.thisptr).get_%s()" % 
@@ -126,7 +126,7 @@ class PyExtAccessorGen(Visitor):
             "get_" + self.field.name + "()")
         self.pxd.println()
 
-        self.pyx.println("cdef %s get_%s(self):" % (
+        self.pyx.println("cpdef %s get_%s(self):" % (
             PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t),
             self.field.name))
         self.pyx.inc_indent()

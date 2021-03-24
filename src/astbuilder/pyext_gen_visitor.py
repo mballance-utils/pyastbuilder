@@ -82,7 +82,7 @@ class PyExtGenVisitor(Visitor):
         self.pyx.dec_indent()
         
         for c in ast.classes:
-            self.pyx.println("cdef void visit%s(self, %s i):" % (c.name, c.name))
+            self.pyx.println("cpdef void visit%s(self, %s i):" % (c.name, c.name))
             self.pyx.inc_indent()
             self.pyx.println("self.thisptr.py_visit%s(<%s_decl.%s *>i.thisptr);" % 
                              (c.name, self.name, c.name))
@@ -123,17 +123,10 @@ class PyExtGenVisitor(Visitor):
         self.hpp.inc_indent()
         self.hpp.println("PyObject *m_proxy;")
         
-#        if self.namespace is not None:
-#            self.pxd.println("cdef extern from '%s.h' namespace %s:" % ("BaseVisitor.h", self.namespace))
-#        else:
-#            self.pxd.println("cdef extern from '%s.h':" % "BaseVisitor.h")
-            
         self.pxd.inc_indent()
-#        self.pxd.println("cpdef cppclass %s:" % "BaseVisitor")
         self.hpp.println("public:")
         self.pxd.inc_indent()
         for c in ast.classes:
-#            self.pxd.println("void visit%s(%s *i)" % (c.name, c.name))
 
             # C++-callable visitor method            
             self.hpp.println("virtual void visit%s(%s *i) override;" % (c.name, c.name))

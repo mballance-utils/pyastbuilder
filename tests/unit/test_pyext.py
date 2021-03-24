@@ -88,12 +88,12 @@ setup(
             f.write(setup_py)
 
         ret = subprocess.call(
-#            args=sys.executable + " setup.py build_ext --inplace",
             [sys.executable, "setup.py", "build_ext", "--inplace"],
             cwd=self.testdir
             )
         self.assertEqual(ret, 0)
-        
+
+        # Load just-compiled extension        
         sys.path.insert(0, self.testdir)
         import testast
         
@@ -111,11 +111,17 @@ setup(
             def __init__(self):
                 super().__init__()
                 
+            def visitc1(self, i):
+                print("visitc1")
+                
             def visitc2(self, i):
-                print("visitc2")
+                print("--> visitc2")
+                super().visitc2(i)
+                print("<-- visitc2")
                 
         v = MyVisitor()
-        c2_i.accept(v)
+        for i in range(1000):
+            c2_i.accept(v)
                 
         
         

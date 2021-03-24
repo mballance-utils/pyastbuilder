@@ -167,9 +167,9 @@ class GenCppVisitor(Visitor):
                     out_cpp.dec_indent()
                     out_cpp.println("}")
             elif isinstance(d.t, TypePointer):
-                out_cpp.println("if (i->" + d.name + "()) {")
+                out_cpp.println("if (i->get_" + d.name + "()) {")
                 out_cpp.inc_indent()
-                out_cpp.println("i->" + d.name + "()->accept(this);")
+                out_cpp.println("i->get_" + d.name + "()->accept(this);")
                 out_cpp.dec_indent()
                 out_cpp.println("}")
             

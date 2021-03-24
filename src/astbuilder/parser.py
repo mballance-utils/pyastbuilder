@@ -79,7 +79,7 @@ class Parser(object):
             t = None
             is_ctor = True
             init = None
-            item = elem[name].strip()
+            item = elem[name]
             
             if isinstance(item, str):
                 # Simple type signature

@@ -50,6 +50,9 @@ class PyExtGen(Visitor):
             cpp,
             hpp).gen(ast)
             
+        if not os.path.isdir(self.outdir):
+            os.makedirs(self.outdir)
+            
         with open(os.path.join(self.outdir, self.name + "_ext.py"), "w") as f:
             f.write(PyExtGenExtDef(self.name).gen(ast))
             

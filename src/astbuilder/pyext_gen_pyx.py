@@ -62,7 +62,7 @@ class PyExtGenPyx(Visitor):
         
         # Generate the prototype that goes in the .pxd
         if self.namespace is not None:
-            self.pxd.println("cdef extern from \"%s.h\" namespace %s:" % (c.name, self.namespace))
+            self.pxd.println("cdef extern from \"%s.h\" namespace \"%s\":" % (c.name, self.namespace))
         else:
             self.pxd.println("cdef extern from \"%s.h\":" % c.name)
         self.pxd.inc_indent()
@@ -75,7 +75,7 @@ class PyExtGenPyx(Visitor):
         self.pxd.inc_indent()
         params = self.collect_ctor_params(c)
         if len(params) == 0:
-            self.pxd.println("%s():" % c.name)
+            self.pxd.println("%s()" % c.name)
         else:
             self.pxd.println("%s(" % c.name)
             self.pxd.inc_indent()
@@ -169,7 +169,7 @@ class PyExtGenPyx(Visitor):
             for d in c.data:
                 PyExtAccessorGen(self.name, c.name, self.pxd, self.pyx).gen(d)
         else:
-            self.pyd.println("pass")
+            self.pxd.println("pass")
             
         if c.super is None:
             self.pxd.println("void accept(BaseVisitor *v)")

@@ -43,7 +43,7 @@ class PyExtGenVisitor(Visitor):
 
         # Define the AST BaseVisitor class
         if self.namespace is not None:
-            self.pxd.println("cdef extern from '%s.h' namespace %s:" % ("BaseVisitor", self.namespace))
+            self.pxd.println("cdef extern from '%s.h' namespace '%s':" % ("BaseVisitor", self.namespace))
         else:
             self.pxd.println("cdef extern from '%s.h':" % "BaseVisitor")
             
@@ -56,7 +56,7 @@ class PyExtGenVisitor(Visitor):
         self.pxd.dec_indent()
         
         if self.namespace is not None:
-            self.pxd.println("cdef extern from '%s.h' namespace %s:" % ("PyBaseVisitor", self.namespace))
+            self.pxd.println("cdef extern from '%s.h' namespace '%s':" % ("PyBaseVisitor", self.namespace))
         else:
             self.pxd.println("cdef extern from '%s.h':" % "PyBaseVisitor")
             

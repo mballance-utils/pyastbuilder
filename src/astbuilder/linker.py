@@ -5,6 +5,15 @@ Created on Sep 13, 2020
 '''
 from astbuilder.visitor import Visitor
 from astbuilder.ast_ref import AstRef
+from toposort import toposort, toposort_flatten
+
+#>>> list(toposort({2: {11},
+#...                9: {11, 8, 10},
+#...                10: {11, 3},
+#...                11: {7, 5},
+#...                8: {7, 3},
+#...               }))
+#[{3, 5, 7}, {8, 11}, {2, 10}, {9}]
 
 class Linker(Visitor):
     
@@ -21,6 +30,29 @@ class Linker(Visitor):
         
         self.phase = 1
         ast.accept(self)
+        
+        # Now, sort classes in dependency order
+        for i,c in enumerate(self.ast.classes):
+            c.index = i
+            
+        sort_d = {}
+        for i,c in enumerate(self.ast.classes):
+            d = set()
+            if c.super is not None:
+                d.add(c.super.target.index)
+            sort_d[i] = d
+            
+        sort_order = list(toposort(sort_d))
+
+        print("sort_order: " + str(sort_order))
+        classes = []        
+        for o in sort_order:
+            for i in o:
+                classes.append(ast.classes[i])
+                
+        ast.classes = classes
+                
+            
         
     def visitAstClass(self, c):
         self.active_class = c

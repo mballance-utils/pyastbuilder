@@ -10,6 +10,7 @@ from astbuilder.pyext_accessor_gen import PyExtAccessorGen
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.visitor import Visitor
 import os
+from astbuilder.type_pointer import TypePointer
 
 
 class PyExtGenPyx(Visitor):
@@ -34,6 +35,14 @@ class PyExtGenPyx(Visitor):
         self.gen_defs(self.pyx)
         
         self.pyx.println("cimport %s_decl" % self.name)
+        
+        for e in ast.enums:
+            self.pxd.println("ctypedef enum %s:" % e.name)
+            self.pxd.inc_indent()
+            for i,v in enumerate(e.values):
+                self.pxd.println("%s%s" % (v[0], "," if i+1 < len(e.values) else ""))
+            self.pxd.dec_indent()
+            self.pyx.println("ctypedef %s_decl.%s %s" % (self.name, e.name, e.name))
         
         ast.accept(self)
         
@@ -138,32 +147,37 @@ class PyExtGenPyx(Visitor):
         self.pyx.println()
 
         # TODO: Handle ctor parameters        
-        self.pyx.println("@staticmethod")
-        if len(c.data) == 0:
-            self.pyx.println("def create():")
-        else:
-            self.pyx.println("def create(")
-            self.pyx.inc_indent()
-            self.gen_ctor_params(c, self.pyx)
-            self.pyx.dec_indent()
-            self.pyx.write("):\n")
-        self.pyx.inc_indent()
-        self.pyx.println("'''Creates a Python wrapper around native class'''")
-        self.pyx.println("ret = %s()" % c.name)
-        if len(params) == 0:
-            self.pyx.println("ret.thisptr = new %s_decl.%s()" % (self.name, c.name))
-        else:
-            self.pyx.write("%sret.thisptr = new %s_decl.%s(" % (self.pyx.ind, self.name, c.name))
-            for i,p in enumerate(params):
-                if i>0:
-                    self.pyx.write(", ")
-                self.pyx.write("%s" % p.name)
-            self.pyx.write(")\n")
-                
-        self.pyx.println("ret.owned = True")
-        self.pyx.println("return ret")
-        self.pyx.dec_indent()
-        self.pyx.println()
+#         self.pyx.println("@staticmethod")
+#         if len(c.data) == 0:
+#             self.pyx.println("def create():")
+#         else:
+#             self.pyx.println("def create(")
+#             self.pyx.inc_indent()
+#             self.gen_ctor_params(c, True, self.pyx)
+#             self.pyx.dec_indent()
+#             self.pyx.write("):\n")
+#         self.pyx.inc_indent()
+#         self.pyx.println("'''Creates a Python wrapper around a new native class'''")
+#         self.pyx.println("ret = %s()" % c.name)
+#         if len(params) == 0:
+#             self.pyx.println("ret.thisptr = new %s_decl.%s()" % (self.name, c.name))
+#         else:
+#             self.pyx.write("%sret.thisptr = new %s_decl.%s(" % (self.pyx.ind, self.name, c.name))
+#             for i,p in enumerate(params):
+#                 if i>0:
+#                     self.pyx.write(", ")
+#                 # TODO: ref 'thisptr' if it is a user-defined type
+#                 if isinstance(p.t, TypePointer):
+#                     self.pyx.write("<%s_decl.%s *>%s.thisptr" % (self.name, 
+#                         PyExtTypeNameGen(is_pyx=True).gen(p.t), p.name))
+#                 else:
+#                     self.pyx.write("%s" % p.name)
+#             self.pyx.write(")\n")
+#                 
+#         self.pyx.println("ret.owned = True")
+#         self.pyx.println("return ret")
+#         self.pyx.dec_indent()
+#         self.pyx.println()
 
         if len(c.data) > 0:
             for d in c.data:
@@ -183,19 +197,22 @@ class PyExtGenPyx(Visitor):
     def visitAstData(self, d:AstData):
         print("visitAstData")
         
-    def gen_ctor_params(self, c, out):
+    def gen_ctor_params(self, 
+                        c, 
+                        is_pyx,
+                        out):
         """Returns True if this level (or a previous level) added content"""
         ret = False
         if c.super is not None:
             # Recurse first
-            ret |= self.gen_ctor_params(c.super.target, out)
+            ret |= self.gen_ctor_params(c.super.target, is_pyx, out)
             
         params = list(filter(lambda d : d.is_ctor, c.data))
         for i,p in enumerate(params):
             if ret and i == 0:
                 out.write(",\n")
             out.write(out.ind)
-            out.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
+            out.write(PyExtTypeNameGen(compressed=True,is_pyx=is_pyx, is_ret=True).gen(p.t) + " ")
             out.write(p.name + (",\n" if i+1 < len(params) else ""))
             ret = True
         

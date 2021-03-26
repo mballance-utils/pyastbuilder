@@ -3,7 +3,9 @@ Created on Mar 23, 2021
 
 @author: mballance
 '''
+from astbuilder.ast_enum import AstEnum
 from astbuilder.visitor import Visitor
+
 
 class PyExtGenVisitor(Visitor):
     
@@ -84,17 +86,22 @@ class PyExtGenVisitor(Visitor):
         for c in ast.classes:
             self.pyx.println("cpdef void visit%s(self, %s i):" % (c.name, c.name))
             self.pyx.inc_indent()
-            self.pyx.println("self.thisptr.py_visit%s(<%s_decl.%s *>i.thisptr);" % 
+            self.pyx.println("self.thisptr.py_visit%s(<%s_decl.%s *>(i.thisptr));" % 
                              (c.name, self.name, c.name))
             self.pyx.dec_indent()
         self.pyx.dec_indent()
         
     def gen_py_base_visitor(self, ast):
         self.hpp.println("#pragma once")
+        
         self.hpp.println("#include \"BaseVisitor.h\"")
         self.hpp.println("#include \"%s_api.h\"" % self.name)
         
         self.cpp.println("#include \"PyBaseVisitor.h\"")
+        
+        if self.namespace is not None:
+            self.hpp.println("namespace %s {" % self.namespace)
+            self.cpp.println("namespace %s {" % self.namespace)
        
         # Constructor 
         self.hpp.println("class PyBaseVisitor : public BaseVisitor {")
@@ -155,5 +162,13 @@ class PyExtGenVisitor(Visitor):
 
         self.hpp.dec_indent()
         self.hpp.println("};")
+        
+        if self.namespace is not None:
+            self.hpp.println("} /* namespace %s */" % self.namespace)
+            self.cpp.println("} /* namespace %s */" % self.namespace)
+        
+    def visitAstEnum(self, e:AstEnum):
+        pass
+        
         
 

@@ -37,6 +37,7 @@ def getparser():
     gen_py_ext.add_argument("-license")
     gen_py_ext.add_argument("-namespace")
     gen_py_ext.add_argument("-name")
+    gen_py_ext.add_argument("-package")
 
     return parser
 

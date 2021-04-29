@@ -22,10 +22,12 @@ class PyExtGen(Visitor):
     def __init__(self,
                  outdir,
                  name,
+                 target_pkg,
                  license,
                  namespace):
         self.outdir = outdir
         self.name = name
+        self.target_pkg = target_pkg
         self.license = license
         self.namespace = namespace
 
@@ -45,6 +47,7 @@ class PyExtGen(Visitor):
         PyExtGenVisitor(
             self.name,
             self.namespace,
+            self.target_pkg,
             pxd,
             pyx,
             cpp,

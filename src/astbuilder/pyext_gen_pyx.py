@@ -11,6 +11,7 @@ from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.visitor import Visitor
 import os
 from astbuilder.type_pointer import TypePointer
+from astbuilder.type_userdef import TypeUserDef
 
 
 class PyExtGenPyx(Visitor):
@@ -112,14 +113,10 @@ class PyExtGenPyx(Visitor):
             
         self.pyx.println()
             
-        self.pyx.println("def __cinit__(self):")
+        self.pyx.println("def __init__(self):")
         self.pyx.inc_indent()
-        if c.super is None:
-            self.pyx.println("pass")
-        else:
-            self.pyx.println("self.owned = False")
+        self.pyx.println("self.owned = False")
         self.pyx.dec_indent()
-        self.pyx.println()
         
         if c.super is None:
             self.pyx.println("def __dealloc__(self):")

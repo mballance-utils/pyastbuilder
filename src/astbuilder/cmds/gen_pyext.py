@@ -41,10 +41,14 @@ def gen(args):
         
     if not hasattr(args, "o") or args.o is None:
         args.o = os.getcwd()
+        
+    if not hasattr(args, "package") or args.package is None:
+        args.package = args.name
 
     PyExtGen(
         args.o, 
         args.name,
+        args.package,
         args.license,
         args.namespace).generate(ast)
         

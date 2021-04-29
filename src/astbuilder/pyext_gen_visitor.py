@@ -12,12 +12,14 @@ class PyExtGenVisitor(Visitor):
     def __init__(self,
                  name,
                  namespace,
+                 target_pkg,
                  pxd,
                  pyx,
                  cpp,
                  hpp):
         self.name = name
         self.namespace = namespace
+        self.target_pkg = target_pkg
         self.pxd = pxd
         self.pyx = pyx
         self.cpp = cpp
@@ -95,7 +97,10 @@ class PyExtGenVisitor(Visitor):
         self.hpp.println("#pragma once")
         
         self.hpp.println("#include \"BaseVisitor.h\"")
-        self.hpp.println("#include \"%s_api.h\"" % self.name)
+        if self.target_pkg.find('.') != -1:
+            self.hpp.println("#include \"%s_api.h\"" % self.target_pkg[self.target_pkg.find('.')+1:])
+        else:
+            self.hpp.println("#include \"%s_api.h\"" % self.target_pkg)
         
         self.cpp.println("#include \"PyBaseVisitor.h\"")
         
@@ -111,7 +116,7 @@ class PyExtGenVisitor(Visitor):
         
         self.cpp.println("PyBaseVisitor::PyBaseVisitor(PyObject *proxy) : m_proxy(proxy) {")
         self.cpp.inc_indent()
-        self.cpp.println("import_%s();" % self.name)
+        self.cpp.println("import_%s();" % self.target_pkg.replace('.','__'))
         self.cpp.println("Py_XINCREF(m_proxy);")
         self.cpp.dec_indent()
         self.cpp.println("}")

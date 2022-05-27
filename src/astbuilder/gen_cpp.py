@@ -57,21 +57,33 @@ class GenCPP(Visitor):
     
     def visitAstClass(self, c : AstClass):
         h = OutStream()
+        inc_h = OutStream()
         cpp = OutStream()
         
-        self.define_class(c, h, cpp)
+        self.define_class(c, h, inc_h, cpp)
         
 #        h = self.define_class_h(c)
 #        cpp = self.define_class_cpp(c)
+
+        if self.namespace is not None:
+            incdir = os.path.join(self.outdir, "include", self.namespace)
+        else:
+            incdir = os.path.join(self.outdir, "include")
         
         if not os.path.isdir(self.outdir):
             os.makedirs(self.outdir)
+            
+        if not os.path.isdir(incdir):
+            os.makedirs(incdir)
 
         with open(os.path.join(self.outdir, c.name + ".h"), "w") as f:
             f.write(h.content())
             
         with open(os.path.join(self.outdir, c.name + ".cpp"), "w") as f:
             f.write(cpp.content())
+            
+        with open(os.path.join(incdir, "I%s.h" % c.name), "w") as f:
+            f.write(inc_h.content())
             
     def visitAstEnum(self, e:AstEnum):
         out_h = OutStream()
@@ -127,7 +139,7 @@ class GenCPP(Visitor):
         with open(os.path.join(self.outdir, f.name + ".h"), "w") as f:
             f.write(out_h.content())
             
-    def define_class(self, c, out_h, out_cpp):
+    def define_class(self, c, out_h, out_inc_h, out_cpp):
         # Class body output stream
         out_cls = OutStream()
 
@@ -146,7 +158,12 @@ class GenCPP(Visitor):
         out_h.println("#include <set>")
         out_h.println("#include <string>")
         out_h.println("#include <vector>")
-        out_h.println("#include \"IVisitor.h\"") 
+        if self.namespace is not None:
+            out_h.println("#include \"%s/IVisitor.h\"" % self.namespace) 
+            out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
+        else:
+            out_h.println("#include \"IVisitor.h\"") 
+            out_h.println("#include \"I%s.h\"" % c.name)
         
         if c.super is not None:
             out_h.println("#include \"" + c.super.name + ".h\"")
@@ -180,7 +197,7 @@ class GenCPP(Visitor):
         out_cls.write("class " + c.name)
         
         if c.super is not None:
-            out_cls.write(" : public " + c.super.name)
+            out_cls.write(" : public virtual I%s, public %s" % (c.super.name, c.super.name))
         out_cls.write(" {\n")
         out_cls.write("public:\n")
         out_cls.inc_indent()
@@ -622,6 +639,10 @@ class GenCPP(Visitor):
         out.println("endif()")
         out.println()
         out.println("add_library(" + self.name + " ${" + self.name + "_SRC})")
+        out.println()
+        out.println("target_include_directories(%s PUBLIC" % self.name)
+        out.println("    ${PROJECT_SOURCE_DIR}/include")
+        out.println(")")
         out.println()
         out.println("install(TARGETS " + self.name + "")
         out.inc_indent()

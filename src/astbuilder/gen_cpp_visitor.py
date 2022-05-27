@@ -61,8 +61,16 @@ class GenCppVisitor(Visitor):
         if self.namespace is not None:
             out_m.println("} /* namespace " + self.namespace + " */")
             out_m.println()
+
+        if self.namespace is not None:            
+            incdir = os.path.join(self.outdir, "include", self.namespace)
+        else:
+            incdir = os.path.join(self.outdir, "include")
+            
+        if not os.path.isdir(incdir):
+            os.makedirs(incdir)
         
-        with open(os.path.join(self.outdir, "IVisitor.h"), "w") as fp:
+        with open(os.path.join(incdir, "IVisitor.h"), "w") as fp:
             fp.write(
                 out.content() +
                 out_m.content()

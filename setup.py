@@ -27,7 +27,8 @@ setup(
     'setuptools_scm'
   ],
   install_requires=[
-      'pyyaml'
+      'pyyaml',
+      'toposort'
   ],
 )
 

@@ -3,16 +3,18 @@ Created on Mar 22, 2021
 
 @author: mballance
 '''
+import os
+
 from astbuilder.ast_class import AstClass
 from astbuilder.ast_data import AstData
+from astbuilder.cpp_gen_ns import CppGenNS
 from astbuilder.outstream import OutStream
 from astbuilder.pyext_accessor_gen import PyExtAccessorGen
+from astbuilder.pyext_gen_ptrdefs import PyExtGenPtrDef
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
-from astbuilder.visitor import Visitor
-import os
 from astbuilder.type_pointer import TypePointer
 from astbuilder.type_userdef import TypeUserDef
-from astbuilder.pyext_gen_ptrdefs import PyExtGenPtrDef
+from astbuilder.visitor import Visitor
 
 
 class PyExtGenPyx(Visitor):
@@ -85,7 +87,8 @@ class PyExtGenPyx(Visitor):
         
         # Generate the prototype that goes in the .decl_pxd
         if self.namespace is not None:
-            self.decl_pxd.println("cdef extern from \"%s/I%s.h\" namespace \"%s\":" % (c.name, self.namespace, self.namespace))
+            self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
+                CppGenNS.incpath(self.namespace, "I%s.h"%c.name), self.namespace))
         else:
             self.decl_pxd.println("cdef extern from \"I%s.h\":" % c.name)
             

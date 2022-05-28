@@ -21,6 +21,7 @@ from astbuilder.visitor import Visitor
 from .cpp_type_name_gen import CppTypeNameGen
 from astbuilder.cpp_accessor_gen import CppAccessorGen
 from astbuilder.type_map import TypeMap
+from astbuilder.cpp_gen_ns import CppGenNS
 
 
 class GenCPP(Visitor):
@@ -94,9 +95,8 @@ class GenCPP(Visitor):
         out_h.println(" ****************************************************************************/")
         out_h.println("#pragma once")
         out_h.println()
-        
-        if self.namespace is not None:
-            out_h.println("namespace " + self.namespace + " {")
+
+        CppGenNS.enter(self.namespace, out_h)        
         
         out_h.println("enum " + e.name + " {")
         out_h.inc_indent()
@@ -105,10 +105,8 @@ class GenCPP(Visitor):
             out_h.println(v[0] + ",")
         out_h.dec_indent()
         out_h.println("};")
-        
-        if self.namespace is not None:
-            out_h.println()
-            out_h.println("} /* namespace " + self.namespace + " */")
+
+        CppGenNS.leave(self.namespace, out_h)        
         
         with open(os.path.join(self.outdir, e.name + ".h"), "w") as f:
             f.write(out_h.content())
@@ -123,18 +121,15 @@ class GenCPP(Visitor):
         out_h.println("#pragma once")
         out_h.println("#include <stdint.h>")
         out_h.println()
-        
-        if self.namespace is not None:
-            out_h.println("namespace " + self.namespace + " {")
+
+        CppGenNS.enter(self.namespace, out_h)
         
         out_h.println("typedef uint32_t " + f.name + ";")
         
         for i,v in enumerate(f.values):
             out_h.println("static const " + f.name + " " + v + " = (1 << " + str(i) + ");")
-        
-        if self.namespace is not None:
-            out_h.println()
-            out_h.println("} /* namespace " + self.namespace + " */")
+
+        CppGenNS.leave(self.namespace, out_h)        
         
         with open(os.path.join(self.outdir, f.name + ".h"), "w") as f:
             f.write(out_h.content())
@@ -170,34 +165,24 @@ class GenCPP(Visitor):
         out_inc_h.println("#include <string>")
         out_h.println("#include <vector>")
         out_inc_h.println("#include <vector>")
-        if self.namespace is not None:
-            out_h.println("#include \"%s/IVisitor.h\"" % self.namespace) 
-            out_inc_h.println("#include \"%s/IVisitor.h\"" % self.namespace) 
-            out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
-        else:
-            out_h.println("#include \"IVisitor.h\"") 
-            out_inc_h.println("#include \"IVisitor.h\"") 
-            out_h.println("#include \"I%s.h\"" % c.name)
+        out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IVisitor.h"))
+        out_inc_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IVisitor.h"))
+        out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h" % c.name))
 
-        if self.namespace is not None:
-            out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
-        else:
-            out_h.println("#include \"I%s.h\"" % c.name)
+        # if self.namespace is not None:
+        #     out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
+        # else:
+        #     out_h.println("#include \"I%s.h\"" % c.name)
             
         if c.super is not None:
             out_h.println("#include \"" + c.super.name + ".h\"")
-            out_inc_h.println("#include \"I" + c.super.name + ".h\"")
+            out_inc_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h"%c.super.name))
             out_h.println()
             out_inc_h.println()
 
-        if self.namespace is not None:
-            out_cls.println()
-            out_icls.println()
-            out_cls.println("namespace " + self.namespace + " {")
-            out_icls.println("namespace %s {" % self.namespace)
-            out_cls.println()
-            out_icls.println()
-            
+        CppGenNS.enter(self.namespace, out_cls)
+        CppGenNS.enter(self.namespace, out_icls)
+
         # Handle dependencies
         for key,d in c.deps.items():
             if isinstance(d.target, AstClass):
@@ -300,10 +285,8 @@ class GenCPP(Visitor):
             out_cpp.println("#include \"" + key + ".h\"")
                 
         out_cpp.println()
-        
-        if self.namespace is not None:
-            out_cpp.println("namespace " + self.namespace + " {")
-            out_cpp.println()
+
+        CppGenNS.enter(self.namespace, out_cpp)        
             
         out_cpp.println(c.name + "::" + c.name + "(")
         
@@ -361,16 +344,11 @@ class GenCPP(Visitor):
         
         out_cls.write("};\n")
         out_icls.write("};\n")
-        
-        if self.namespace is not None:
-            out_cls.println()
-            out_cls.println("} /* namespace " + self.namespace + " */")
-            out_cls.println()
-                    
-        if self.namespace is not None:
-            out_cpp.println()
-            out_cpp.println("} /* namespace " + self.namespace + " */")
 
+        CppGenNS.leave(self.namespace, out_cls)
+        CppGenNS.leave(self.namespace, out_icls)
+        CppGenNS.leave(self.namespace, out_cpp)
+                    
         out_h.write(out_cls.content())
         out_inc_h.write(out_icls.content())
                 
@@ -398,10 +376,7 @@ class GenCPP(Visitor):
             out_h.println("#include \"" + c.super.name + ".h\"")
             out_h.println()
 
-        if self.namespace is not None:
-            out_cls.println()
-            out_cls.println("namespace " + self.namespace + " {")
-            out_cls.println()
+        CppGenNS.enter(self.namespace, out_cls)
             
         # Handle dependencies
         for key,d in c.deps.items():
@@ -501,11 +476,8 @@ class GenCPP(Visitor):
         
         
         out_cls.write("};\n")
-        
-        if self.namespace is not None:
-            out_cls.println()
-            out_cls.println("} /* namespace " + self.namespace + " */")
-            out_cls.println()
+
+        CppGenNS.leave(self.namespace, out_cls)        
 
         return (out_h.content() + 
                 out_inc.content() +
@@ -525,10 +497,8 @@ class GenCPP(Visitor):
             out_cpp.println("#include \"" + key + ".h\"")
                 
         out_cpp.println()
-        
-        if self.namespace is not None:
-            out_cpp.println("namespace " + self.namespace + " {")
-            out_cpp.println()
+
+        CppGenNS.enter(self.namespace, out_cpp)        
             
         out_cpp.println(c.name + "::" + c.name + "(")
         
@@ -571,10 +541,8 @@ class GenCPP(Visitor):
                 out_cpp.dec_indent()
                 out_cpp.println("}")
                 out_cpp.println()        
-        
-        if self.namespace is not None:
-            out_cpp.println()
-            out_cpp.println("} /* namespace " + self.namespace + " */")
+
+        CppGenNS.leave(self.namespace, out_cpp)
         
         return out_cpp.content()
     

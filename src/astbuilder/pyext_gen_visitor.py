@@ -4,6 +4,7 @@ Created on Mar 23, 2021
 @author: mballance
 '''
 from astbuilder.ast_enum import AstEnum
+from astbuilder.cpp_gen_ns import CppGenNS
 from astbuilder.visitor import Visitor
 
 
@@ -49,7 +50,8 @@ class PyExtGenVisitor(Visitor):
 
         # Define the AST VisitorBase class
         if self.namespace is not None:
-            self.decl_pxd.println("cdef extern from '%s.h' namespace '%s':" % ("VisitorBase", self.namespace))
+            self.decl_pxd.println("cdef extern from '%s' namespace '%s':" % (
+                CppGenNS.incpath(self.namespace, "impl/VisitorBase.h"), self.namespace))
         else:
             self.decl_pxd.println("cdef extern from '%s.h':" % "VisitorBase")
             
@@ -62,7 +64,7 @@ class PyExtGenVisitor(Visitor):
         self.decl_pxd.dec_indent()
         
         if self.namespace is not None:
-            self.decl_pxd.println("cdef extern from '%s.h' namespace '%s':" % ("PyBaseVisitor", self.namespace))
+            self.decl_pxd.println("cdef extern from 'PyBaseVisitor.h' namespace '%s':" % self.namespace)
         else:
             self.decl_pxd.println("cdef extern from '%s.h':" % "PyBaseVisitor")
             
@@ -118,10 +120,9 @@ class PyExtGenVisitor(Visitor):
             self.hpp.println("#include \"%s_api.h\"" % self.target_pkg)
         
         self.cpp.println("#include \"PyBaseVisitor.h\"")
-        
-        if self.namespace is not None:
-            self.hpp.println("namespace %s {" % self.namespace)
-            self.cpp.println("namespace %s {" % self.namespace)
+
+        CppGenNS.enter(self.namespace, self.hpp)        
+        CppGenNS.enter(self.namespace, self.cpp)
        
         # Constructor 
         self.hpp.println("class PyBaseVisitor : public VisitorBase {")
@@ -182,10 +183,9 @@ class PyExtGenVisitor(Visitor):
 
         self.hpp.dec_indent()
         self.hpp.println("};")
-        
-        if self.namespace is not None:
-            self.hpp.println("} /* namespace %s */" % self.namespace)
-            self.cpp.println("} /* namespace %s */" % self.namespace)
+
+        CppGenNS.leave(self.namespace, self.hpp)
+        CppGenNS.leave(self.namespace, self.cpp)
         
     def visitAstEnum(self, e:AstEnum):
         pass

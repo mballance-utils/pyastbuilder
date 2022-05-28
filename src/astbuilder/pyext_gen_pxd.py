@@ -9,6 +9,7 @@ from astbuilder.outstream import OutStream
 from astbuilder.pyext_accessor_gen import PyExtAccessorGen
 from astbuilder.visitor import Visitor
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
+from astbuilder.cpp_gen_ns import CppGenNS
 
 
 class PyExtGenPxd(Visitor):
@@ -45,7 +46,8 @@ class PyExtGenPxd(Visitor):
     
     def visitAstClass(self, c : AstClass):
         if self.namespace is not None:
-            self.out.println("cdef extern from \"%s.h\" namespace %s:" % (c.name, self.namespace))
+            self.out.println("cdef extern from \"%s\" namespace %s:" % (
+                CppGenNS.incpath(self.namespace, "I%s.h"%c.name), self.namespace))
         else:
             self.out.println("cdef extern from \"%s.h\":" % c.name)
         self.out.inc_indent()

@@ -12,6 +12,7 @@ from astbuilder.visitor import Visitor
 from .cpp_type_name_gen import CppTypeNameGen
 from astbuilder.type_scalar import TypeScalar
 from astbuilder.cpp_gen_fwd_decl import CppGenFwdDecl
+from astbuilder.cpp_gen_ns import CppGenNS
 
 
 class GenCppVisitor(Visitor):
@@ -39,9 +40,8 @@ class GenCppVisitor(Visitor):
         out.println(" ****************************************************************************/")
         out.println("#pragma once")
         out.println()
-        
-        if self.namespace is not None:
-            out.println("namespace " + self.namespace + " {")
+
+        CppGenNS.enter(self.namespace, out)
 
         CppGenFwdDecl(out).gen(ast)
         out.println()
@@ -61,10 +61,8 @@ class GenCppVisitor(Visitor):
         out_m.println("};")
         
         out.println()
-        
-        if self.namespace is not None:
-            out_m.println("} /* namespace " + self.namespace + " */")
-            out_m.println()
+       
+        CppGenNS.leave(self.namespace, out_m) 
 
         if self.namespace is not None:            
             incdir = os.path.join(self.outdir, "include", self.namespace)
@@ -90,12 +88,15 @@ class GenCppVisitor(Visitor):
             out_h.write(self.license)
         out_h.println(" ****************************************************************************/")
         out_h.println("#pragma once")
-        out_h.println("#include \"IVisitor.h\"")
+        out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IVisitor.h"))
         out_h.println()
         
-        if self.namespace is not None:
-            out_h_c.println("namespace " + self.namespace + " {")
-            out_h_c.println()
+        for c in ast.classes:
+            out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h"%c.name))
+
+        out_h.println()
+        
+        CppGenNS.enter(self.namespace, out_h)        
         
         out_h_c.println("class VisitorBase : public virtual IVisitor {")
         out_h_c.println("public:")
@@ -106,10 +107,6 @@ class GenCppVisitor(Visitor):
         out_h_c.println()
         
         for c in ast.classes:
-            if self.namespace is not None:
-                out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
-            else:
-                out_h.println("#include \"I%s.h\"" % c.name)
             out_h_c.println("virtual void visit" + c.name + "(I" + c.name + " *i) override {")
             out_h_c.inc_indent()
             self.gen_class_visitor(out_h_c, c)
@@ -127,10 +124,8 @@ class GenCppVisitor(Visitor):
         out_h_c.dec_indent()
         out_h_c.println("};")
         out_h_c.println()
-        
-        if self.namespace is not None:
-            out_h_c.println("} /* namespace " + self.namespace + " */")
-            out_h_c.println()
+
+        CppGenNS.leave(self.namespace, out_h_c)        
             
         if self.namespace is not None:            
             incdir = os.path.join(self.outdir, "include", self.namespace)
@@ -149,9 +144,11 @@ class GenCppVisitor(Visitor):
             )
             
     def gen_class_visitor(self, out_cpp, c):
+        
         if c.super is not None:
             out_cpp.println("visit" + c.super.target.name + "(i);")
         for d in c.data:
+            name = d.name[0].upper() + d.name[1:]
             if isinstance(d.t, TypeList):
                 # Generate an iterator, as long as the
                 # list is of a complex type
@@ -159,16 +156,16 @@ class GenCppVisitor(Visitor):
                     out_cpp.println("for (std::vector<" + CppTypeNameGen().gen(d.t.t) + ">::const_iterator")
                     out_cpp.inc_indent()
                     out_cpp.inc_indent()
-                    out_cpp.println("it=i->get_" + d.name + "().begin();")
-                    out_cpp.println("it!=i->get_" + d.name + "().end(); it++) {")
+                    out_cpp.println("it=i->get" + name + "().begin();")
+                    out_cpp.println("it!=i->get" + name + "().end(); it++) {")
                     out_cpp.dec_indent()
                     out_cpp.println("(*it)->accept(this);")
                     out_cpp.dec_indent()
                     out_cpp.println("}")
             elif isinstance(d.t, TypePointer):
-                out_cpp.println("if (i->get_" + d.name + "()) {")
+                out_cpp.println("if (i->get" + name + "()) {")
                 out_cpp.inc_indent()
-                out_cpp.println("i->get_" + d.name + "()->accept(this);")
+                out_cpp.println("i->get" + name + "()->accept(this);")
                 out_cpp.dec_indent()
                 out_cpp.println("}")
             

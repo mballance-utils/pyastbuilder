@@ -55,12 +55,13 @@ class PyExtAccessorGen(Visitor):
             self.gen_scalar_accessors(t)
     
     def gen_collection_accessors(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
         # Generate a read-only accessor
 #        self.decl_pxd.println(self.const_ref_ret(t) + "get_" + self.field.name + "()")
 #        self.decl_pxd.println()
 
         # Generate a non-const accessor
-        self.decl_pxd.println(self.nonconst_ref_ret(t, is_pydecl=True) + "get_" + self.field.name + "();")
+        self.decl_pxd.println(self.nonconst_ref_ret(t, is_pydecl=True) + "get" + name + "();")
         
 #         self.pyx.println("cdef %s get_%s():" % (self.nonconst_ref_ret(t), self.field.name))
 #         self.pyx.inc_indent()
@@ -70,75 +71,84 @@ class PyExtAccessorGen(Visitor):
 
    
     def gen_scalar_accessors(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        
         # Generate a read-only accessor
         self.decl_pxd.println(
             PyExtTypeNameGen(compressed=True,is_pydecl=True, is_ret=True).gen(t) + 
-            " get_" + self.field.name + "()")
+            " get" + name + "()")
         self.decl_pxd.println()
         
-        self.pxd.println("cpdef %s get_%s(self)" % 
-                         (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), self.field.name))
         
-        self.pyx.println("cpdef %s get_%s(self):" % 
-                         (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), self.field.name))
+        self.pxd.println("cpdef %s get%s(self)" % 
+                         (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), name))
+        
+        self.pyx.println("cpdef %s get%s(self):" % 
+                         (PyExtTypeNameGen(compressed=True,is_ret=True).gen(t), name))
         self.pyx.inc_indent()
-        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get_%s()" % 
-                         (self.name, self.clsname, self.field.name))
+        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get%s()" % 
+                         (self.name, self.clsname, name))
         self.pyx.dec_indent()
 
         # Generate a non-const accessor
-        self.decl_pxd.println("void set_" + self.field.name + "(" +
+        self.decl_pxd.println("void set" + name + "(" +
             PyExtTypeNameGen(compressed=True,is_ret=False).gen(t) + " v)")
 
     def gen_rawptr_accessors(self, t):
         # Generate a read-only accessor
+        name = self.field.name[0].upper() + self.field.name[1:]
         self.decl_pxd.println(
             PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t) + 
-            "get_" + self.field.name + "();")
+            "get" + name + "();")
         self.decl_pxd.println()
 
         # Generate a setter
-        self.decl_pxd.println("void set_" + self.field.name + "(" +
+        self.decl_pxd.println("void set" + name + "(" +
             PyExtTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v)")
 
     def gen_uptr_accessors(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        
         # Generate a read-only accessor
         self.decl_pxd.println(
             PyExtTypeNameGen(compressed=True,is_ptr=True,is_const=False).gen(t.t) + 
-            "get_" + self.field.name + "()")
+            "get" + name + "()")
         self.decl_pxd.println()
 
         # Generate a setter
-        self.decl_pxd.println("void set_" + self.field.name + "(" +
+        self.decl_pxd.println("void set" + name + "(" +
             PyExtTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v)")
 
     def gen_sptr_accessors(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        
         # Generate a read-only accessor
         self.decl_pxd.println(
-            PyExtTypeNameGen(compressed=True).gen(t) + " get_" + 
-            self.field.name + "()")
+            PyExtTypeNameGen(compressed=True).gen(t) + " get" + name + "()")
         self.decl_pxd.println()
 
         # Generate a setter
-        self.decl_pxd.println("void set_" + self.field.name + "(" +
+        self.decl_pxd.println("void set" + name + "(" +
             PyExtTypeNameGen(compressed=True).gen(t) + " v)")
 
     def gen_string_accessors(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        
         # Generate a read-only accessor
         self.decl_pxd.println(
             PyExtTypeNameGen(compressed=True,is_ref=True,is_const=True).gen(t) + 
-            "get_" + self.field.name + "()")
+            "get" + name + "()")
         self.decl_pxd.println()
 
-        self.pxd.println("cpdef %s get_%s(self)" % (
+        self.pxd.println("cpdef %s get%s(self)" % (
             PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t),
-            self.field.name))
-        self.pyx.println("cpdef %s get_%s(self):" % (
+            name))
+        self.pyx.println("cpdef %s get%s(self):" % (
             PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t),
-            self.field.name))
+            name))
         self.pyx.inc_indent()
-        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get_%s()" %
-                         (self.name, self.clsname, self.field.name))
+        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get%s()" %
+                         (self.name, self.clsname, name))
         self.pyx.dec_indent()
 
         # Generate a setter

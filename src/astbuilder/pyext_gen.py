@@ -32,6 +32,7 @@ class PyExtGen(Visitor):
         self.namespace = namespace
 
     def generate(self, ast):
+        decl_pxd = OutStream()
         pxd = OutStream()
         pyx = OutStream()
         cpp = OutStream()
@@ -41,6 +42,7 @@ class PyExtGen(Visitor):
             self.outdir, 
             self.name, 
             self.namespace,
+            decl_pxd,
             pxd,
             pyx).gen(ast)
             
@@ -48,6 +50,7 @@ class PyExtGen(Visitor):
             self.name,
             self.namespace,
             self.target_pkg,
+            decl_pxd,
             pxd,
             pyx,
             cpp,
@@ -60,6 +63,9 @@ class PyExtGen(Visitor):
             f.write(PyExtGenExtDef(self.name, self.target_pkg).gen(ast))
             
         with open(os.path.join(self.outdir, "%s_decl.pxd" % self.name), "w") as f:
+            f.write(decl_pxd.content())
+            
+        with open(os.path.join(self.outdir, "%s.pxd" % self.name), "w") as f:
             f.write(pxd.content())
             
         with open(os.path.join(self.outdir, "%s.pyx" % self.name), "w") as f:

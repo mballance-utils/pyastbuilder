@@ -11,6 +11,7 @@ from astbuilder.type_pointer import TypePointer
 from astbuilder.visitor import Visitor
 from .cpp_type_name_gen import CppTypeNameGen
 from astbuilder.type_scalar import TypeScalar
+from astbuilder.cpp_gen_fwd_decl import CppGenFwdDecl
 
 
 class GenCppVisitor(Visitor):
@@ -41,6 +42,9 @@ class GenCppVisitor(Visitor):
         
         if self.namespace is not None:
             out.println("namespace " + self.namespace + " {")
+
+        CppGenFwdDecl(out).gen(ast)
+        out.println()
         
         out_m.println("class IVisitor {")
         out_m.println("public:")
@@ -50,7 +54,7 @@ class GenCppVisitor(Visitor):
         
         for c in ast.classes:
             out.println("class " + c.name + ";")
-            out_m.println("virtual void visit" + c.name + "(" + c.name + " *i) = 0;")
+            out_m.println("virtual void visit" + c.name + "(I" + c.name + " *i) = 0;")
             out_m.println()
             
         out_m.dec_indent();
@@ -102,8 +106,11 @@ class GenCppVisitor(Visitor):
         out_h_c.println()
         
         for c in ast.classes:
-            out_h.println("#include \"" + c.name + ".h\"")
-            out_h_c.println("virtual void visit" + c.name + "(" + c.name + " *i) override {")
+            if self.namespace is not None:
+                out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
+            else:
+                out_h.println("#include \"I%s.h\"" % c.name)
+            out_h_c.println("virtual void visit" + c.name + "(I" + c.name + " *i) override {")
             out_h_c.inc_indent()
             self.gen_class_visitor(out_h_c, c)
             out_h_c.dec_indent()

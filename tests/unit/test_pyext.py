@@ -13,6 +13,7 @@ from astbuilder.pyext_gen import PyExtGen
 import os
 import subprocess
 import sys
+import shutil
 
 class TestPyExt(BaseTest):
     
@@ -93,6 +94,12 @@ setup(
             os.makedirs(os.path.join(self.testdir, "test"))
             with open(os.path.join(self.testdir, "test", "__init__.py"), "w") as fp:
                 fp.write("\n")
+        shutil.copy(
+            os.path.join(self.testdir, "ext", "ast_decl.pxd"),
+            os.path.join(self.testdir, "test", "ast_decl.pxd"))
+        shutil.copy(
+            os.path.join(self.testdir, "ext", "ast.pxd"),
+            os.path.join(self.testdir, "test", "ast.pxd"))
 
         ret = subprocess.call(
             [sys.executable, "setup.py", "build_ext", "--inplace"],

@@ -10,7 +10,8 @@ class PyExtTypeNameGen(Visitor):
     
     def __init__(self, 
                  compressed=False, 
-                 is_pyx=False,
+                 is_pytype=False,
+                 is_pydecl=False,
                  is_ret=False,
                  is_ref=False,
                  is_ptr=False,
@@ -18,7 +19,8 @@ class PyExtTypeNameGen(Visitor):
         self.out = ""
 #        self.compressed = compressed
         self.compressed = False
-        self.is_pyx = is_pyx
+        self.is_pytype = is_pytype
+        self.is_pydecl = is_pydecl
         self.is_ret = is_ret
         self.is_ref = is_ref
         self.is_ptr = is_ptr
@@ -36,7 +38,10 @@ class PyExtTypeNameGen(Visitor):
                 self.out += "const "
             
             self.out += "std_vector["
-            self.out += PyExtTypeNameGen(compressed=self.compressed).gen(t.t)
+            self.out += PyExtTypeNameGen(
+                compressed=self.compressed,
+                is_pytype=self.is_pytype,
+                is_pydecl=self.is_pydecl).gen(t.t)
             self.out += "]"
         
             if self.is_ret:
@@ -66,7 +71,7 @@ class PyExtTypeNameGen(Visitor):
     def visitTypePointer(self, t : TypePointer):
         if self.depth == 0:
             self.depth += 1
-            if self.is_pyx:
+            if self.is_pytype:
                 # Just display the name
                 Visitor.visitTypePointer(self, t)
             else:
@@ -123,10 +128,13 @@ class PyExtTypeNameGen(Visitor):
     def visitTypeUserDef(self, t):
         if self.is_const:
             self.out += "const "
-        self.out += t.name
+        if self.is_pydecl:
+            self.out += "I%s" % t.name
+        else:
+            self.out += "%s" % t.name
         if self.is_ptr:
-            if not self.is_pyx:
-                self.out += " *"
+            if not self.is_pytype:
+                self.out += "P "
             else:
                 self.out += " "
         if self.is_ref:

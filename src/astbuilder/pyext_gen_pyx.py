@@ -12,6 +12,7 @@ from astbuilder.visitor import Visitor
 import os
 from astbuilder.type_pointer import TypePointer
 from astbuilder.type_userdef import TypeUserDef
+from astbuilder.pyext_gen_ptrdefs import PyExtGenPtrDef
 
 
 class PyExtGenPyx(Visitor):
@@ -20,35 +21,44 @@ class PyExtGenPyx(Visitor):
                  outdir,
                  name, 
                  namespace,
+                 decl_pxd,
                  pxd,
                  pyx):
         self.outdir = outdir
         self.name = name
         self.namespace = namespace
+        self.decl_pxd = decl_pxd
         self.pxd = pxd
         self.pyx = pyx
         
     def gen(self, ast):
         
         self.pyx.println("# cython: language_level=3")
+        self.pxd.println("# cython: language_level=3")
+        self.decl_pxd.println("# cython: language_level=3")
         
+        self.gen_defs(self.decl_pxd)
+        PyExtGenPtrDef(self.decl_pxd).gen(ast)
         self.gen_defs(self.pxd)
-        self.gen_defs(self.pyx)
+#        self.gen_defs(self.pyx)
         
+        self.pxd.println("cimport %s_decl" % self.name)
         self.pyx.println("cimport %s_decl" % self.name)
         
         for e in ast.enums:
-            self.pxd.println("ctypedef enum %s:" % e.name)
-            self.pxd.inc_indent()
+            self.decl_pxd.println("ctypedef enum %s:" % e.name)
+            self.decl_pxd.inc_indent()
             for i,v in enumerate(e.values):
-                self.pxd.println("%s%s" % (v[0], "," if i+1 < len(e.values) else ""))
-            self.pxd.dec_indent()
+                self.decl_pxd.println("%s%s" % (v[0], "," if i+1 < len(e.values) else ""))
+            self.decl_pxd.dec_indent()
             self.pyx.println("ctypedef %s_decl.%s %s" % (self.name, e.name, e.name))
         
         ast.accept(self)
         
     
     def gen_defs(self, out):
+        out.println("from libcpp.cast cimport dynamic_cast")
+        out.println("from libcpp.cast cimport static_cast")
         out.println("from libcpp.string cimport string as      std_string")
         out.println("from libcpp.map cimport map as            std_map")
         out.println("from libcpp.memory cimport unique_ptr as  std_unique_ptr")
@@ -57,7 +67,7 @@ class PyExtGenPyx(Visitor):
         out.println("from libcpp.utility cimport pair as  std_pair")
         out.println("from libcpp cimport bool as          bool")
         out.println("cimport cpython.ref as cpy_ref")
-
+        out.println()
 
         out.println("ctypedef char                 int8_t")
         out.println("ctypedef unsigned char        uint8_t")
@@ -66,83 +76,99 @@ class PyExtGenPyx(Visitor):
         out.println("ctypedef int                  int32_t")
         out.println("ctypedef unsigned int         uint32_t")
         out.println("ctypedef long long            int64_t")
-        out.println("ctypedef unsigned long long   uint64_t")    
+        out.println("ctypedef unsigned long long   uint64_t")
+        out.println()
+        
+        
         
     def visitAstClass(self, c : AstClass):
         
-        # Generate the prototype that goes in the .pxd
+        # Generate the prototype that goes in the .decl_pxd
         if self.namespace is not None:
-            self.pxd.println("cdef extern from \"%s.h\" namespace \"%s\":" % (c.name, self.namespace))
+            self.decl_pxd.println("cdef extern from \"%s/I%s.h\" namespace \"%s\":" % (c.name, self.namespace, self.namespace))
         else:
-            self.pxd.println("cdef extern from \"%s.h\":" % c.name)
-        self.pxd.inc_indent()
+            self.decl_pxd.println("cdef extern from \"I%s.h\":" % c.name)
+            
+        self.decl_pxd.inc_indent()
+        
         if c.super is not None:
-            self.pxd.println("cpdef cppclass %s(%s):" % (c.name, PyExtTypeNameGen().gen(c.super)))
+            self.decl_pxd.println("cpdef cppclass I%s(I%s):" % (c.name, PyExtTypeNameGen().gen(c.super)))
         else:
-            self.pxd.println("cpdef cppclass %s:" % c.name)
+            self.decl_pxd.println("cpdef cppclass I%s:" % c.name)
             
         # Generate the ctor
-        self.pxd.inc_indent()
+        self.decl_pxd.inc_indent()
         params = self.collect_ctor_params(c)
         if len(params) == 0:
-            self.pxd.println("%s()" % c.name)
+            self.decl_pxd.println("%s()" % c.name)
         else:
-            self.pxd.println("%s(" % c.name)
-            self.pxd.inc_indent()
+            self.decl_pxd.println("%s(" % c.name)
+            self.decl_pxd.inc_indent()
             for i,p in enumerate(params):
                 if i > 0:
-                    self.pxd.write(",\n")
-                self.pxd.write(self.pxd.ind)
-                self.pxd.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
-                self.pxd.write(p.name)
-            self.pxd.dec_indent()
-            self.pxd.write(")\n")
+                    self.decl_pxd.write(",\n")
+                self.decl_pxd.write(self.decl_pxd.ind)
+                self.decl_pxd.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
+                self.decl_pxd.write(p.name)
+            self.decl_pxd.dec_indent()
+            self.decl_pxd.write(")\n")
         
         # Generate the wrapper that goes in the .pyx
         if c.super is not None:
-            self.pyx.println("cdef class %s(%s):" % (c.name, PyExtTypeNameGen().gen(c.super)))
+            self.pyx.println("cdef class %s(%s):" % (c.name, PyExtTypeNameGen(is_pytype=True).gen(c.super)))
+            self.pxd.println("cdef class %s(%s):" % (c.name, PyExtTypeNameGen(is_pytype=True).gen(c.super)))
         else:
             self.pyx.println("cdef class %s(object):" % c.name)
+            self.pxd.println("cdef class %s(object):" % c.name)
             
                         
         self.pyx.inc_indent()
+        self.pxd.inc_indent()
         
         if c.super is None:
-            self.pyx.println("cdef %s_decl.%s     *thisptr" % (self.name, c.name))
-            self.pyx.println("cdef bool           owned")
+            self.pxd.println("cdef %s_decl.I%s    *_hndl" % (self.name, c.name))
+            self.pxd.println("cdef bool           _owned")
             
         self.pyx.println()
+        self.pxd.println()
             
-        self.pyx.println("def __init__(self):")
-        self.pyx.inc_indent()
-        self.pyx.println("self.owned = False")
-        self.pyx.dec_indent()
+#        self.pyx.println("def __init__(self):")
+#        self.pyx.inc_indent()
+#        self.pyx.println("self._owned = False")
+#        self.pyx.dec_indent()
         
         if c.super is None:
             self.pyx.println("def __dealloc__(self):")
             self.pyx.inc_indent()
-            self.pyx.println("if self.owned:")
+            self.pyx.println("if self._owned and self._hndl != NULL:")
             self.pyx.inc_indent()
-            self.pyx.println("del self.thisptr")
+            self.pyx.println("del self._hndl")
             self.pyx.dec_indent()
             self.pyx.dec_indent()
             self.pyx.println()
             
             self.pyx.println("cpdef void accept(self, VisitorBase v):")
             self.pyx.inc_indent()
-            self.pyx.println("self.thisptr.accept(v.thisptr)")
+            self.pyx.println("self._hndl.accept(v._hndl)")
             self.pyx.dec_indent()
+            self.pyx.println()
+            
+            self.pxd.println("cpdef void accept(self, VisitorBase v)")
             
         self.pyx.println("@staticmethod")
-        self.pyx.println("cdef %s wrap(%s_decl.%s *thisptr):" % (c.name, self.name, c.name))
+        self.pyx.println("cdef %s mk(%s_decl.I%s *hndl, bool owned):" % (c.name, self.name, c.name))
         self.pyx.inc_indent()
         self.pyx.println("'''Creates a Python wrapper around native class'''")
         self.pyx.println("ret = %s()" % c.name)
-        self.pyx.println("ret.thisptr = thisptr")
+        self.pyx.println("ret._hndl = hndl")
+        self.pyx.println("ret._owned = owned")
         self.pyx.println("return ret")
         self.pyx.dec_indent()
         self.pyx.println()
-
+        
+        self.pxd.println("@staticmethod")
+        self.pxd.println("cdef %s mk(%s_decl.I%s *hndl, bool owned)" % (c.name, self.name, c.name))
+        
         # TODO: Handle ctor parameters        
 #         self.pyx.println("@staticmethod")
 #         if len(c.data) == 0:
@@ -157,39 +183,45 @@ class PyExtGenPyx(Visitor):
 #         self.pyx.println("'''Creates a Python wrapper around a new native class'''")
 #         self.pyx.println("ret = %s()" % c.name)
 #         if len(params) == 0:
-#             self.pyx.println("ret.thisptr = new %s_decl.%s()" % (self.name, c.name))
+#             self.pyx.println("ret._hndl = new %s_decl.%s()" % (self.name, c.name))
 #         else:
-#             self.pyx.write("%sret.thisptr = new %s_decl.%s(" % (self.pyx.ind, self.name, c.name))
+#             self.pyx.write("%sret._hndl = new %s_decl.%s(" % (self.pyx.ind, self.name, c.name))
 #             for i,p in enumerate(params):
 #                 if i>0:
 #                     self.pyx.write(", ")
-#                 # TODO: ref 'thisptr' if it is a user-defined type
+#                 # TODO: ref '_hndl' if it is a user-defined type
 #                 if isinstance(p.t, TypePointer):
-#                     self.pyx.write("<%s_decl.%s *>%s.thisptr" % (self.name, 
+#                     self.pyx.write("<%s_decl.%s *>%s._hndl" % (self.name, 
 #                         PyExtTypeNameGen(is_pyx=True).gen(p.t), p.name))
 #                 else:
 #                     self.pyx.write("%s" % p.name)
 #             self.pyx.write(")\n")
 #                 
-#         self.pyx.println("ret.owned = True")
+#         self.pyx.println("ret._owned = True")
 #         self.pyx.println("return ret")
 #         self.pyx.dec_indent()
 #         self.pyx.println()
 
         if len(c.data) > 0:
             for d in c.data:
-                PyExtAccessorGen(self.name, c.name, self.pxd, self.pyx).gen(d)
+                PyExtAccessorGen(self.name, c.name, self.decl_pxd, self.pxd, self.pyx).gen(d)
         else:
-            self.pxd.println("pass")
+            self.decl_pxd.println("pass")
             
         if c.super is None:
-            self.pxd.println("void accept(VisitorBase *v)")
+            self.decl_pxd.println("void accept(VisitorBase *v)")
             
-        self.pxd.dec_indent()
+        self.decl_pxd.dec_indent()
         self.pyx.dec_indent()
+        self.pxd.dec_indent()
         
-        self.pxd.dec_indent()        
+        self.decl_pxd.dec_indent()        
         self.pyx.dec_indent()        
+        self.pxd.dec_indent()
+        
+        self.decl_pxd.println()
+        self.pyx.println()
+        self.pxd.println()
 
     def visitAstData(self, d:AstData):
         print("visitAstData")

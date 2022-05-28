@@ -142,74 +142,117 @@ class GenCPP(Visitor):
     def define_class(self, c, out_h, out_inc_h, out_cpp):
         # Class body output stream
         out_cls = OutStream()
+        out_icls = OutStream()
 
         #************************************************************
         #* Beginning of the header file        
         #************************************************************
         out_h.println("/****************************************************************************")
+        out_inc_h.println("/****************************************************************************")
         out_h.println(" * " + c.name + ".h")
+        out_inc_h.println(" * I" + c.name + ".h")
         if self.license is not None:
             out_h.write(self.license)
+            out_inc_h.write(self.license)
         out_h.println(" ****************************************************************************/")
+        out_inc_h.println(" ****************************************************************************/")
         out_h.println("#pragma once")
+        out_inc_h.println("#pragma once")
         out_h.println("#include <stdint.h>")
+        out_inc_h.println("#include <stdint.h>")
         out_h.println("#include <map>")
+        out_inc_h.println("#include <map>")
         out_h.println("#include <memory>")
+        out_inc_h.println("#include <memory>")
         out_h.println("#include <set>")
+        out_inc_h.println("#include <set>")
         out_h.println("#include <string>")
+        out_inc_h.println("#include <string>")
         out_h.println("#include <vector>")
+        out_inc_h.println("#include <vector>")
         if self.namespace is not None:
             out_h.println("#include \"%s/IVisitor.h\"" % self.namespace) 
+            out_inc_h.println("#include \"%s/IVisitor.h\"" % self.namespace) 
             out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
         else:
             out_h.println("#include \"IVisitor.h\"") 
+            out_inc_h.println("#include \"IVisitor.h\"") 
             out_h.println("#include \"I%s.h\"" % c.name)
-        
+
+        if self.namespace is not None:
+            out_h.println("#include \"%s/I%s.h\"" % (self.namespace, c.name))
+        else:
+            out_h.println("#include \"I%s.h\"" % c.name)
+            
         if c.super is not None:
             out_h.println("#include \"" + c.super.name + ".h\"")
+            out_inc_h.println("#include \"I" + c.super.name + ".h\"")
             out_h.println()
+            out_inc_h.println()
 
         if self.namespace is not None:
             out_cls.println()
+            out_icls.println()
             out_cls.println("namespace " + self.namespace + " {")
+            out_icls.println("namespace %s {" % self.namespace)
             out_cls.println()
+            out_icls.println()
             
         # Handle dependencies
         for key,d in c.deps.items():
             if isinstance(d.target, AstClass):
-                out_cls.println("class " + key + ";")
-                out_cls.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
-                out_cls.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
+                out_cls.println("class I" + key + ";")
+                out_icls.println("class I" + key + ";")
+                out_cls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
+                out_icls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
+                out_cls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
+                out_icls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
             elif isinstance(d.target, AstEnum):
                 out_h.println("#include \"" + key + ".h\"")
             else:
                 raise Exception("Unknown ref " + str(d.target))
 
         out_cls.println("class " + c.name + ";")
+        out_icls.println("class I" + c.name + ";")
         out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
+        out_icls.println("typedef std::unique_ptr<I" + c.name + "> I" + c.name + "UP;")
         out_cls.println("typedef std::shared_ptr<" + c.name + "> " + c.name + "SP;")
+        out_icls.println("typedef std::shared_ptr<I" + c.name + "> I" + c.name + "SP;")
         out_cls.println()
+        out_icls.println()
         out_cls.println("#ifdef _WIN32")
         out_cls.println("#ifdef DLLEXPORT")
         out_cls.println("__declspec(dllexport)")
         out_cls.println("#endif")
         out_cls.println("#endif /* _WIN32 */")
         out_cls.write("class " + c.name)
-        
+        out_icls.write("class I" + c.name)
+
+        out_cls.write(" : public virtual I%s" % c.name)        
         if c.super is not None:
-            out_cls.write(" : public virtual I%s, public %s" % (c.super.name, c.super.name))
+            out_cls.write(", public %s" % c.super.name)
+            out_icls.write(" : public virtual I%s" % c.super.name)
         out_cls.write(" {\n")
+        out_icls.write(" {\n")
         out_cls.write("public:\n")
+        out_icls.write("public:\n")
         out_cls.inc_indent()
+        out_icls.inc_indent()
+        
+        # Constructor (only in actual class)
         out_cls.println(c.name + "(");
         out_cls.inc_indent()
         self.gen_ctor_params(c, out_cls)
         out_cls.println(");");
         out_cls.dec_indent()
-        
+
+        # Destructor (in both)        
         out_cls.println();
+        out_icls.println();
         out_cls.println("virtual ~" + c.name + "();");
+        out_icls.println("virtual ~I" + c.name + "() { }");
         out_cls.println();
+        out_icls.println();
         
             
 #             # Const accessor
@@ -289,11 +332,13 @@ class GenCPP(Visitor):
         # Field accessors. Content goes both in .h and .cpp files
         out_cpp.println()
         out_cls.println()
+        out_icls.println()
         
-        accessor_gen = CppAccessorGen(out_cls, out_cpp, c.name)
+        accessor_gen = CppAccessorGen(out_cls, out_icls, out_cpp, c.name)
         for i,f in enumerate(c.data):
             if i > 0:
                 out_cls.println()
+                out_icls.println()
                 out_cpp.println()
             accessor_gen.gen(f)
             
@@ -302,7 +347,9 @@ class GenCPP(Visitor):
 
 
         # Wrap up class-content generation
-        out_cls.println("virtual void accept(IVisitor *v) { v->visit" + c.name + "(this);}")
+        if c.super is None:
+            out_icls.println("virtual void accept(IVisitor *v) = 0;")
+        out_cls.println("virtual void accept(IVisitor *v) override { v->visit" + c.name + "(this);}")
         
         out_cls.dec_indent()
         out_cls.println();
@@ -313,6 +360,7 @@ class GenCPP(Visitor):
         out_cls.dec_indent()
         
         out_cls.write("};\n")
+        out_icls.write("};\n")
         
         if self.namespace is not None:
             out_cls.println()
@@ -324,6 +372,7 @@ class GenCPP(Visitor):
             out_cpp.println("} /* namespace " + self.namespace + " */")
 
         out_h.write(out_cls.content())
+        out_inc_h.write(out_icls.content())
                 
         pass
         

@@ -45,14 +45,14 @@ class PyExtGenVisitor(Visitor):
     def gen_visitor_imp(self, ast):
         """Generate the pxd view of the base visitor"""
 
-        # Define the AST BaseVisitor class
+        # Define the AST VisitorBase class
         if self.namespace is not None:
-            self.pxd.println("cdef extern from '%s.h' namespace '%s':" % ("BaseVisitor", self.namespace))
+            self.pxd.println("cdef extern from '%s.h' namespace '%s':" % ("VisitorBase", self.namespace))
         else:
-            self.pxd.println("cdef extern from '%s.h':" % "BaseVisitor")
+            self.pxd.println("cdef extern from '%s.h':" % "VisitorBase")
             
         self.pxd.inc_indent()
-        self.pxd.println("cpdef cppclass %s:" % "BaseVisitor")
+        self.pxd.println("cpdef cppclass %s:" % "VisitorBase")
         self.pxd.inc_indent()
         for c in ast.classes:
             self.pxd.println("void visit%s(%s *i)" % (c.name, c.name))
@@ -65,7 +65,7 @@ class PyExtGenVisitor(Visitor):
             self.pxd.println("cdef extern from '%s.h':" % "PyBaseVisitor")
             
         self.pxd.inc_indent()
-        self.pxd.println("cpdef cppclass %s(%s):" % ("PyBaseVisitor", "BaseVisitor"))
+        self.pxd.println("cpdef cppclass %s(%s):" % ("PyBaseVisitor", "VisitorBase"))
         self.pxd.inc_indent()
         self.pxd.println("PyBaseVisitor(cpy_ref.PyObject *)")
         for c in ast.classes:
@@ -76,7 +76,7 @@ class PyExtGenVisitor(Visitor):
     def gen_visitor(self, ast):
         """Generates cdef class that user can extend"""
         
-        self.pyx.println("cdef class BaseVisitor(object):")
+        self.pyx.println("cdef class VisitorBase(object):")
         self.pyx.inc_indent()
         self.pyx.println("cdef %s_decl.PyBaseVisitor *thisptr" % self.name)
         self.pyx.println("def __cinit__(self):")
@@ -95,8 +95,13 @@ class PyExtGenVisitor(Visitor):
         
     def gen_py_base_visitor(self, ast):
         self.hpp.println("#pragma once")
-        
-        self.hpp.println("#include \"BaseVisitor.h\"")
+
+        if self.namespace is not None:
+            self.hpp.println("#include \"%s/impl/VisitorBase.h\"" % self.namespace)
+        else:                
+            self.hpp.println("#include \"impl/VisitorBase.h\"")
+
+        print("TARGET_PKG: %s" % self.target_pkg)        
         if self.target_pkg.find('.') != -1:
             self.hpp.println("#include \"%s_api.h\"" % self.target_pkg[self.target_pkg.find('.')+1:])
         else:
@@ -109,7 +114,7 @@ class PyExtGenVisitor(Visitor):
             self.cpp.println("namespace %s {" % self.namespace)
        
         # Constructor 
-        self.hpp.println("class PyBaseVisitor : public BaseVisitor {")
+        self.hpp.println("class PyBaseVisitor : public VisitorBase {")
         self.hpp.println("public:")
         self.hpp.inc_indent()
         self.hpp.println("PyBaseVisitor(PyObject *proxy);")
@@ -152,11 +157,11 @@ class PyExtGenVisitor(Visitor):
             self.hpp.println("void py_visit%s(%s *i);" % (c.name, c.name))
             self.cpp.println("void PyBaseVisitor::py_visit%s(%s *i) {" % (c.name, c.name))
             self.cpp.inc_indent()
-            self.cpp.println("BaseVisitor::visit%s(i);" % c.name)
+            self.cpp.println("VisitorBase::visit%s(i);" % c.name)
             self.cpp.dec_indent()
             self.cpp.println("}")
             
-            self.pyx.println("cdef public api %s_call_visit%s(object self, %s_decl.%s *i):" % 
+            self.pyx.println("cdef public api %s_call_visit%s(object self, %s_decl.%s *i) with gil:" % 
                              (self.name, c.name, self.name, c.name))
             self.pyx.inc_indent()
             self.pyx.println("self.visit%s(%s.wrap(i))" % (c.name, c.name))

@@ -9,8 +9,10 @@ class PyExtGenExtDef(object):
     """Generates the extension-definition python file"""
     
     def __init__(self,
-                 name):
+                 name,
+                 package):
         self.name = name
+        self.package = package
         pass
     
     def gen(self, ast):
@@ -21,7 +23,7 @@ class PyExtGenExtDef(object):
         self.out.println("def ext():")
         self.out.inc_indent()
         self.out.println("extdir = os.path.dirname(os.path.abspath(__file__))")
-        self.out.println("return Extension(\"%s\", [" % self.name)
+        self.out.println("return Extension(\"%s\", [" % self.package)
         self.out.inc_indent()
         self.out.inc_indent()
         # TODO: list files and patterns

@@ -41,19 +41,21 @@ from Cython.Build import cythonize
 setup_dir=os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(setup_dir, "ext"))
 
-import testast_ext
+import ast_ext
 
 
 VERSION="0.0.1"
 PLATFORMS = "Any"
 
-ext = testast_ext.ext()
+ext = ast_ext.ext()
 
 for e in dir(ext):
     print("e: " + str(e))
    
 ast_dir=os.path.join(setup_dir, 'ast')
 ext.include_dirs.append(ast_dir)
+ext.include_dirs.append(os.path.join(ast_dir, 'include'))
+ext.include_dirs.append(os.path.join(ast_dir, 'include', 'impl'))
 for f in os.listdir(ast_dir):
     file = os.path.join(ast_dir, f)
     if os.path.isfile(file) and os.path.splitext(f)[1] == ".cpp":
@@ -82,10 +84,15 @@ setup(
         extdir = os.path.join(self.testdir, "ext")
         os.makedirs(extdir)
         
-        PyExtGen(extdir, name, None, None).generate(ast)
+        PyExtGen(extdir, "ast", "test.ast", None, None).generate(ast)
         
         with open(os.path.join(self.testdir, "setup.py"), "w") as f:
             f.write(setup_py)
+            
+        if not os.path.isdir(os.path.join(self.testdir, "test")):
+            os.makedirs(os.path.join(self.testdir, "test"))
+            with open(os.path.join(self.testdir, "test", "__init__.py"), "w") as fp:
+                fp.write("\n")
 
         ret = subprocess.call(
             [sys.executable, "setup.py", "build_ext", "--inplace"],
@@ -95,7 +102,8 @@ setup(
 
         # Load just-compiled extension        
         sys.path.insert(0, self.testdir)
-        import testast
+        import test
+        from test import ast as testast
         
         for e in dir(testast):
             print("e: " + str(e))

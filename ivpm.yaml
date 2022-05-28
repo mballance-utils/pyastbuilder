@@ -1,0 +1,24 @@
+
+package:
+  name: pyastbuilder
+  version: 0.0.1
+
+  dep-sets:
+  - name: default-dev
+    deps:
+    - name: cython
+      src: pypi
+    - name: pyyaml
+      src: pypi
+    - name: toposort
+      src: pypi
+
+  - name: default
+    deps:
+    - name: cython
+      src: pypi
+    - name: pyyaml
+      src: pypi
+    - name: toposort
+      src: pypi
+

@@ -79,10 +79,9 @@ class GenCppVisitor(Visitor):
     def gen_base_visitor(self, ast):
         out_h = OutStream()
         out_h_c = OutStream()
-        out_cpp = OutStream()
         
         out_h.println("/****************************************************************************")
-        out_h.println(" * BaseVisitor.h")
+        out_h.println(" * VisitorBase.h")
         if self.license is not None:
             out_h.write(self.license)
         out_h.println(" ****************************************************************************/")
@@ -94,49 +93,29 @@ class GenCppVisitor(Visitor):
             out_h_c.println("namespace " + self.namespace + " {")
             out_h_c.println()
         
-        out_h_c.println("class BaseVisitor : public virtual IVisitor {")
+        out_h_c.println("class VisitorBase : public virtual IVisitor {")
         out_h_c.println("public:")
         out_h_c.inc_indent()
-        out_h_c.println("BaseVisitor();")
+        out_h_c.println("VisitorBase(IVisitor *this_p=0) : m_this(this_p?this_p:this) { }")
         out_h_c.println()
-        out_h_c.println("virtual ~BaseVisitor();")
+        out_h_c.println("virtual ~VisitorBase() { }")
         out_h_c.println()
-        
-        out_cpp.println("/****************************************************************************")
-        out_cpp.println(" * BaseVisitor.cpp")
-        if self.license is not None:
-            out_cpp.write(self.license)
-        out_cpp.println(" ****************************************************************************/")
-        out_cpp.println("#include \"BaseVisitor.h\"")
-        out_cpp.println()
-        
-        if self.namespace is not None:
-            out_cpp.println("namespace " + self.namespace + " {")
-            out_cpp.println()
-            
-        out_cpp.println("BaseVisitor::BaseVisitor() {")
-        out_cpp.println()
-        out_cpp.println("}")
-        out_cpp.println()
-        out_cpp.println("BaseVisitor::~BaseVisitor() {")
-        out_cpp.println()
-        out_cpp.println("}")
-        out_cpp.println()
-        
         
         for c in ast.classes:
             out_h.println("#include \"" + c.name + ".h\"")
-            out_h_c.println("virtual void visit" + c.name + "(" + c.name + " *i) override;")
+            out_h_c.println("virtual void visit" + c.name + "(" + c.name + " *i) override {")
+            out_h_c.inc_indent()
+            self.gen_class_visitor(out_h_c, c)
+            out_h_c.dec_indent()
+            out_h_c.println("}")
             out_h_c.println()
             
-            out_cpp.println("void BaseVisitor::visit" + c.name + "(" + c.name + " *i) {")
-            out_cpp.inc_indent()
-            self.gen_class_visitor(out_cpp, c)
-            out_cpp.dec_indent()
-            out_cpp.println("}")
-            out_cpp.println()
-            
-            
+        out_h_c.println()
+        out_h_c.println("protected:")
+        out_h_c.inc_indent()
+        out_h_c.println("IVisitor *m_this;")
+        out_h_c.dec_indent()
+        
         out_h.println()
         out_h_c.dec_indent()
         out_h_c.println("};")
@@ -145,17 +124,22 @@ class GenCppVisitor(Visitor):
         if self.namespace is not None:
             out_h_c.println("} /* namespace " + self.namespace + " */")
             out_h_c.println()
-            out_cpp.println("} /* namespace " + self.namespace + " */")
-            out_cpp.println()
-        
-        with open(os.path.join(self.outdir, "BaseVisitor.h"), "w") as fp:
+            
+        if self.namespace is not None:            
+            incdir = os.path.join(self.outdir, "include", self.namespace)
+        else:
+            incdir = os.path.join(self.outdir, "include")
+            
+        impldir = os.path.join(incdir, "impl")
+            
+        if not os.path.isdir(impldir):
+            os.makedirs(impldir)
+
+        with open(os.path.join(impldir, "VisitorBase.h"), "w") as fp:
             fp.write(
                 out_h.content() +
                 out_h_c.content()
             )
-            
-        with open(os.path.join(self.outdir, "BaseVisitor.cpp"), "w") as fp:
-            fp.write(out_cpp.content())
             
     def gen_class_visitor(self, out_cpp, c):
         if c.super is not None:

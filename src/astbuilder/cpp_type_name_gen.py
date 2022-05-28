@@ -116,7 +116,8 @@ class CppTypeNameGen(Visitor):
     def visitTypeUserDef(self, t):
         if self.is_const:
             self.out += "const "
-        self.out += t.name
+        # TODO: do we know if this is a class or an enum?
+        self.out += "I" + t.name
         if self.is_ptr:
             self.out += " *"
         if self.is_ref:

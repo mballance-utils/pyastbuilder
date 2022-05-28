@@ -128,7 +128,7 @@ class PyExtGenPyx(Visitor):
             self.pyx.dec_indent()
             self.pyx.println()
             
-            self.pyx.println("cpdef void accept(self, BaseVisitor v):")
+            self.pyx.println("cpdef void accept(self, VisitorBase v):")
             self.pyx.inc_indent()
             self.pyx.println("self.thisptr.accept(v.thisptr)")
             self.pyx.dec_indent()
@@ -183,7 +183,7 @@ class PyExtGenPyx(Visitor):
             self.pxd.println("pass")
             
         if c.super is None:
-            self.pxd.println("void accept(BaseVisitor *v)")
+            self.pxd.println("void accept(VisitorBase *v)")
             
         self.pxd.dec_indent()
         self.pyx.dec_indent()

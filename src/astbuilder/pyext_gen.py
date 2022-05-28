@@ -57,7 +57,7 @@ class PyExtGen(Visitor):
             os.makedirs(self.outdir)
             
         with open(os.path.join(self.outdir, self.name + "_ext.py"), "w") as f:
-            f.write(PyExtGenExtDef(self.name).gen(ast))
+            f.write(PyExtGenExtDef(self.name, self.target_pkg).gen(ast))
             
         with open(os.path.join(self.outdir, "%s_decl.pxd" % self.name), "w") as f:
             f.write(pxd.content())

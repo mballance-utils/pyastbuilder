@@ -64,14 +64,8 @@ class GenCppVisitor(Visitor):
        
         CppGenNS.leave(self.namespace, out_m) 
 
-        if self.namespace is not None:            
-            incdir = os.path.join(self.outdir, "include", self.namespace)
-        else:
-            incdir = os.path.join(self.outdir, "include")
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)
             
-        if not os.path.isdir(incdir):
-            os.makedirs(incdir)
-        
         with open(os.path.join(incdir, "IVisitor.h"), "w") as fp:
             fp.write(
                 out.content() +
@@ -126,12 +120,8 @@ class GenCppVisitor(Visitor):
         out_h_c.println()
 
         CppGenNS.leave(self.namespace, out_h_c)        
-            
-        if self.namespace is not None:            
-            incdir = os.path.join(self.outdir, "include", self.namespace)
-        else:
-            incdir = os.path.join(self.outdir, "include")
-            
+
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)            
         impldir = os.path.join(incdir, "impl")
             
         if not os.path.isdir(impldir):

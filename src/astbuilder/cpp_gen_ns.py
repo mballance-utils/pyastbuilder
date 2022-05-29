@@ -40,6 +40,7 @@ class CppGenNS(object):
             ret = os.path.join(outdir, "include")
         else:
             elems = namespace.split("::")
+            print("elems: %s" % str(elems))
             ret = os.path.join(outdir, "include", "/".join(elems))
             
         if create and not os.path.isdir(ret):

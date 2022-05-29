@@ -71,17 +71,11 @@ class GenCPP(Visitor):
 #        h = self.define_class_h(c)
 #        cpp = self.define_class_cpp(c)
 
-        if self.namespace is not None:
-            incdir = os.path.join(self.outdir, "include", self.namespace)
-        else:
-            incdir = os.path.join(self.outdir, "include")
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)
         
         if not os.path.isdir(self.outdir):
             os.makedirs(self.outdir)
             
-        if not os.path.isdir(incdir):
-            os.makedirs(incdir)
-
         with open(os.path.join(self.outdir, c.name + ".h"), "w") as f:
             f.write(h.content())
             

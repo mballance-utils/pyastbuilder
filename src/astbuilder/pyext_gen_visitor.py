@@ -108,10 +108,7 @@ class PyExtGenVisitor(Visitor):
     def gen_py_base_visitor(self, ast):
         self.hpp.println("#pragma once")
 
-        if self.namespace is not None:
-            self.hpp.println("#include \"%s/impl/VisitorBase.h\"" % self.namespace)
-        else:                
-            self.hpp.println("#include \"impl/VisitorBase.h\"")
+        self.hpp.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "impl/VisitorBase.h"))
 
         print("TARGET_PKG: %s" % self.target_pkg)        
         if self.target_pkg.find('.') != -1:

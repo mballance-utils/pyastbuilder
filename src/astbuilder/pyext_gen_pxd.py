@@ -22,7 +22,9 @@ class PyExtGenPxd(Visitor):
         pass
     
     def gen(self, ast):
+        self.ast = ast
         self.gen_defs()
+        self.gen_factory()
         ast.accept(self)
         
     def gen_defs(self):
@@ -42,6 +44,23 @@ class PyExtGenPxd(Visitor):
         self.out.println("ctypedef unsigned int         uint32_t")
         self.out.println("ctypedef long long            int64_t")
         self.out.println("ctypedef unsigned long long   uint64_t")
+        
+    def gen_factory(self):
+        if self.namespace is not None:
+            self.out.println("cdef extern from \"%s\" namespace %s:" % (
+                CppGenNS.incpath(self.namespace, "IFactory.h"), self.namespace))
+        else:
+            self.out.println("cdef extern from \"IFactory.h\":")
+        self.out.inc_indent()
+        
+        self.out.println("cdef cppclass IFactory:")
+        self.out.inc_indent()
+        for c in self.ast.classes:
+            name = c.name[0].upper + c.name[1:]
+            self.out.println("I%s *mk%s()" % (c.name, name))
+            pass
+        
+        pass
         
     
     def visitAstClass(self, c : AstClass):

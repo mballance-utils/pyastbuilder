@@ -22,6 +22,7 @@ from .cpp_type_name_gen import CppTypeNameGen
 from astbuilder.cpp_accessor_gen import CppAccessorGen
 from astbuilder.type_map import TypeMap
 from astbuilder.cpp_gen_ns import CppGenNS
+from astbuilder.cpp_gen_factory import CppGenFactory
 
 
 class GenCPP(Visitor):
@@ -46,6 +47,10 @@ class GenCPP(Visitor):
         # Collect the set of enumerated-type names
         for e in ast.enums:
             self.enum_t.add(e.name)
+            
+        CppGenFactory(
+            self.outdir,
+            self.namespace).gen(ast)
             
         ast.accept(self)
         GenCppVisitor(

@@ -15,6 +15,7 @@ from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.type_pointer import TypePointer
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
+from astbuilder.pyext_gen_params import PyExtGenParams
 
 
 class PyExtGenPyx(Visitor):
@@ -34,6 +35,7 @@ class PyExtGenPyx(Visitor):
         self.pyx = pyx
         
     def gen(self, ast):
+        self.ast = ast
         
         self.pyx.println("# cython: language_level=3")
         self.pxd.println("# cython: language_level=3")
@@ -54,6 +56,9 @@ class PyExtGenPyx(Visitor):
                 self.decl_pxd.println("%s%s" % (v[0], "," if i+1 < len(e.values) else ""))
             self.decl_pxd.dec_indent()
             self.pyx.println("ctypedef %s_decl.%s %s" % (self.name, e.name, e.name))
+        
+        self.gen_factory_decl()
+        self.gen_factory()
         
         ast.accept(self)
         
@@ -81,8 +86,62 @@ class PyExtGenPyx(Visitor):
         out.println("ctypedef unsigned long long   uint64_t")
         out.println()
         
+
+    def gen_factory_decl(self):
+        if self.namespace is not None:
+            self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
+                CppGenNS.incpath(self.namespace, "IFactory.h"), self.namespace))
+        else:
+            self.decl_pxd.println("cdef extern from \"IFactory.h\":")
+        self.decl_pxd.inc_indent()
         
+        self.decl_pxd.println("cdef cppclass IFactory:")
+        self.decl_pxd.inc_indent()
+        for c in self.ast.classes:
+            name = c.name[0].upper() + c.name[1:]
+            self.decl_pxd.write("%sI%s *mk%s(" % (self.decl_pxd.ind, c.name, name))
+            PyExtGenParams.gen_ctor_params(c, self.decl_pxd, is_decl=True, ins_self=False)
+            self.decl_pxd.write(")\n")
+            pass
+        self.decl_pxd.dec_indent()
         
+        self.decl_pxd.dec_indent()
+        
+    def gen_factory(self):
+        self.pxd.println("cdef class Factory(object):")
+        self.pyx.println("cdef class Factory(object):")
+        self.pxd.inc_indent()
+        self.pyx.inc_indent()
+        self.pxd.println("cdef %s_decl.IFactory *_hndl" % (self.name,))
+
+        for c in self.ast.classes:
+            name = c.name[0].upper() + c.name[1:]
+            self.pxd.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
+            PyExtGenParams.gen_ctor_params(c, self.pxd, is_decl=False, ins_self=True)
+            self.pxd.write(")\n")
+            
+            self.pyx.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
+            PyExtGenParams.gen_ctor_params(c, self.pyx, is_decl=False, ins_self=True)
+            self.pyx.write("):\n")
+            self.pyx.inc_indent()
+            self.pyx.println("return %s.mk(self._hndl.mk%s(" % (c.name, name))
+            PyExtGenParams.gen_ctor_pvals(c, self.pyx)
+            self.pyx.write("), True)\n")
+            self.pyx.dec_indent()
+        
+        self.pyx.println("@staticmethod")
+        self.pxd.println("@staticmethod")
+        self.pxd.println("cdef mk(%s_decl.IFactory *hndl)" % (self.name,))
+        self.pyx.println("cdef mk(%s_decl.IFactory *hndl):" % (self.name,))
+        self.pyx.inc_indent()
+        self.pyx.println("ret = Factory()")
+        self.pyx.println("ret._hndl = hndl")
+        self.pyx.println("return ret")
+        self.pyx.dec_indent()
+        
+        self.pxd.dec_indent()
+        self.pyx.dec_indent()
+
     def visitAstClass(self, c : AstClass):
         
         # Generate the prototype that goes in the .decl_pxd

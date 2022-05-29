@@ -48,14 +48,35 @@ class PyExtGenPyx(Visitor):
         
         self.pxd.println("cimport %s_decl" % self.name)
         self.pyx.println("cimport %s_decl" % self.name)
+        self.pyx.println("from enum import IntEnum")
         
         for e in ast.enums:
-            self.decl_pxd.println("ctypedef enum %s:" % e.name)
+            if self.namespace is not None:
+                self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
+                    CppGenNS.incpath(self.namespace, "%s.h"%e.name), self.namespace))
+            else:
+                self.decl_pxd.println("cdef extern from \"%s.h\":" % e.name)
+
+            self.decl_pxd.inc_indent()                
+            self.decl_pxd.println("cdef enum %s:" % e.name)
             self.decl_pxd.inc_indent()
+
+            self.pyx.println("class %s(IntEnum):" % e.name)
+            self.pyx.inc_indent()
+                        
             for i,v in enumerate(e.values):
-                self.decl_pxd.println("%s%s" % (v[0], "," if i+1 < len(e.values) else ""))
-            self.decl_pxd.dec_indent()
-            self.pyx.println("ctypedef %s_decl.%s %s" % (self.name, e.name, e.name))
+                if self.namespace is not None:
+                    self.decl_pxd.println("%s \"%s\"" % (
+                        v[0], self.namespace + "::" + e.name + "::" + v[0]))
+                else:
+                    self.decl_pxd.println("%s \"%s\"" % (
+                        v[0], e.name + "::" + v[0]))
+                self.pyx.println("%s = %s_decl.%s.%s" % (
+                    v[0], self.name, e.name, v[0]))
+                
+            self.decl_pxd.dec_indent()                
+            self.decl_pxd.dec_indent()                
+            self.pyx.dec_indent()
         
         self.gen_factory_decl()
         self.gen_factory()
@@ -64,6 +85,7 @@ class PyExtGenPyx(Visitor):
         
     
     def gen_defs(self, out):
+        out.println("from enum import IntEnum")
         out.println("from libcpp.cast cimport dynamic_cast")
         out.println("from libcpp.cast cimport static_cast")
         out.println("from libcpp.string cimport string as      std_string")
@@ -124,8 +146,9 @@ class PyExtGenPyx(Visitor):
             PyExtGenParams.gen_ctor_params(c, self.pyx, is_decl=False, ins_self=True)
             self.pyx.write("):\n")
             self.pyx.inc_indent()
+            PyExtGenParams.gen_ctor_param_temps(c, self.pyx)
             self.pyx.println("return %s.mk(self._hndl.mk%s(" % (c.name, name))
-            PyExtGenParams.gen_ctor_pvals(c, self.pyx)
+            PyExtGenParams.gen_ctor_pvals(self.name, c, self.pyx)
             self.pyx.write("), True)\n")
             self.pyx.dec_indent()
         

@@ -54,6 +54,8 @@ class CppGenFactory(object):
         pass
     
     def gen_ih_prelude(self, out):
+        for e in self.ast.enums:
+            out.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%e.name))
         for c in self.ast.classes:
             out.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h"%c.name))
             

@@ -4,6 +4,7 @@ from astbuilder.type_scalar import TypeScalar, TypeKind
 
 from .type_pointer import TypePointer
 from .visitor import Visitor
+from astbuilder.ast_enum import AstEnum
 
 
 class PyExtTypeNameGen(Visitor):
@@ -128,10 +129,15 @@ class PyExtTypeNameGen(Visitor):
     def visitTypeUserDef(self, t):
         if self.is_const:
             self.out += "const "
-        if self.is_pydecl:
-            self.out += "I%s" % t.name
+        if not isinstance(t.target, AstEnum):
+            if self.is_pydecl:
+                self.out += "I%s" % t.name
+            else:
+                self.out += "%s" % t.name
         else:
-            self.out += "%s" % t.name
+            # Type names are omitted in Pyx
+            if self.is_pydecl:
+                self.out += t.name
         if self.is_ptr:
             if not self.is_pytype:
                 self.out += "P "

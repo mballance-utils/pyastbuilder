@@ -103,7 +103,7 @@ class GenCPP(Visitor):
 
         CppGenNS.enter(self.namespace, out_h)        
         
-        out_h.println("enum " + e.name + " {")
+        out_h.println("enum class " + e.name + " {")
         out_h.inc_indent()
         
         for v in e.values:
@@ -113,7 +113,9 @@ class GenCPP(Visitor):
 
         CppGenNS.leave(self.namespace, out_h)        
         
-        with open(os.path.join(self.outdir, e.name + ".h"), "w") as f:
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)
+        
+        with open(os.path.join(incdir, e.name + ".h"), "w") as f:
             f.write(out_h.content())
 
     def visitAstFlags(self, f:AstFlags):
@@ -198,7 +200,7 @@ class GenCPP(Visitor):
                 out_cls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
                 out_icls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
             elif isinstance(d.target, AstEnum):
-                out_h.println("#include \"" + key + ".h\"")
+                out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
             else:
                 raise Exception("Unknown ref " + str(d.target))
 
@@ -287,7 +289,9 @@ class GenCPP(Visitor):
         out_cpp.println()
         # Include files needed for circular dependencies
         for key,d in c.deps.items():
-            out_cpp.println("#include \"" + key + ".h\"")
+            # Other types (eg enums) will have already been included
+            if isinstance(d.target, AstClass):
+                out_cpp.println("#include \"" + key + ".h\"")
                 
         out_cpp.println()
 

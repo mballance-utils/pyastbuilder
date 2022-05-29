@@ -1,4 +1,5 @@
 
+from astbuilder.ast_enum import AstEnum
 from astbuilder.type_pointer import PointerKind
 from astbuilder.type_scalar import TypeScalar, TypeKind
 
@@ -117,7 +118,10 @@ class CppTypeNameGen(Visitor):
         if self.is_const:
             self.out += "const "
         # TODO: do we know if this is a class or an enum?
-        self.out += "I" + t.name
+        if not isinstance(t.target, AstEnum):
+            self.out += "I" + t.name
+        else:
+            self.out += t.name
         if self.is_ptr:
             self.out += " *"
         if self.is_ref:

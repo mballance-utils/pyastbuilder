@@ -143,7 +143,7 @@ class CppAccessorGen(Visitor):
         # Generate a setter
         self.out_h.println("virtual void set" + name + "(" +
             CppTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v) override;")
-        self.out_h.println("virtual void set" + name + "(" +
+        self.out_ih.println("virtual void set" + name + "(" +
             CppTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v) = 0;")
 
         self.out_cpp.println("void " + self.clsname + "::set" + name + 
@@ -181,7 +181,7 @@ class CppAccessorGen(Visitor):
         self.out_ih.println("virtual void set" + name + "(" +
             CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) = 0;")
 
-        self.out_cpp.println("void " + self.clsname + "::set_" + self.field.name + 
+        self.out_cpp.println("void " + self.clsname + "::set" + name + 
                 "(" + CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = " + 
@@ -195,7 +195,7 @@ class CppAccessorGen(Visitor):
         # Generate a read-only accessor
         self.out_h.println("virtual " + 
             CppTypeNameGen(compressed=True).gen(t) + " get" + name + "() const override;")
-        self.out_h.println("virtual " + 
+        self.out_ih.println("virtual " + 
             CppTypeNameGen(compressed=True).gen(t) + " get" + name + "() const = 0;")
         self.out_h.println()
         self.out_ih.println()

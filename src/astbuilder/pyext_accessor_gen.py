@@ -27,6 +27,11 @@ class PyExtAccessorGen(Visitor):
         self.decl_pxd = decl_pxd
         self.pyx = pyx
         self.field = None
+        self.decl_pxd_ptr_tgen = PyExtTypeNameGen(
+                compressed=True,
+                is_ref=False,
+                is_const=False,
+                is_pydecl=True) 
         
     def gen(self, field):
         self.field = field
@@ -75,8 +80,7 @@ class PyExtAccessorGen(Visitor):
         
         # Generate a read-only accessor
         self.decl_pxd.println(
-            PyExtTypeNameGen(compressed=True,is_pydecl=True, is_ret=True).gen(t) + 
-            " get" + name + "()")
+            self.decl_pxd_ptr_tgen.gen(t) + " get" + name + "()")
         self.decl_pxd.println()
         
         
@@ -92,44 +96,41 @@ class PyExtAccessorGen(Visitor):
 
         # Generate a non-const accessor
         self.decl_pxd.println("void set" + name + "(" +
-            PyExtTypeNameGen(compressed=True,is_ret=False).gen(t) + " v)")
+            self.decl_pxd_ptr_tgen.gen(t) + " v)")
 
     def gen_rawptr_accessors(self, t):
         # Generate a read-only accessor
         name = self.field.name[0].upper() + self.field.name[1:]
-        self.decl_pxd.println(
-            PyExtTypeNameGen(compressed=True,is_ref=False,is_const=False).gen(t) + 
+        self.decl_pxd.println(self.decl_pxd_ptr_tgen.gen(t) + 
             "get" + name + "();")
         self.decl_pxd.println()
 
         # Generate a setter
         self.decl_pxd.println("void set" + name + "(" +
-            PyExtTypeNameGen(compressed=True,is_const=False,is_ref=False).gen(t) + "v)")
+            self.decl_pxd_ptr_tgen.gen(t) + "v)")
 
     def gen_uptr_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
         
         # Generate a read-only accessor
-        self.decl_pxd.println(
-            PyExtTypeNameGen(compressed=True,is_ptr=True,is_const=False).gen(t.t) + 
+        self.decl_pxd.println(self.decl_pxd_ptr_tgen.gen(t.t) + 
             "get" + name + "()")
         self.decl_pxd.println()
 
         # Generate a setter
-        self.decl_pxd.println("void set" + name + "(" +
-            PyExtTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v)")
+        self.decl_pxd.println("void set" + name + "(" + self.decl_pxd_ptr_tgen.gen(t.t) + "v)")
 
     def gen_sptr_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
         
         # Generate a read-only accessor
         self.decl_pxd.println(
-            PyExtTypeNameGen(compressed=True).gen(t) + " get" + name + "()")
+            PyExtTypeNameGen(compressed=True,is_pydecl=True).gen(t) + " get" + name + "()")
         self.decl_pxd.println()
 
         # Generate a setter
         self.decl_pxd.println("void set" + name + "(" +
-            PyExtTypeNameGen(compressed=True).gen(t) + " v)")
+            PyExtTypeNameGen(compressed=True,is_pydecl=True).gen(t) + " v)")
 
     def gen_string_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]

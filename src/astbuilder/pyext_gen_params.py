@@ -31,6 +31,7 @@ class PyExtGenParams(object):
             
         if ins_self and not ret:
             out.write("self")
+            ret = True
             
         if is_decl:
             is_pytype=False

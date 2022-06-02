@@ -42,6 +42,7 @@ class PyExtGen(Visitor):
             self.outdir, 
             self.name, 
             self.namespace,
+            self.target_pkg,
             decl_pxd,
             pxd,
             pyx).gen(ast)

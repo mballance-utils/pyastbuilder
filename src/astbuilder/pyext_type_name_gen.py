@@ -29,6 +29,7 @@ class PyExtTypeNameGen(Visitor):
         self.depth = 0
         
     def gen(self, t):
+        self.out = ""
         t.accept(self)
         return self.out
     
@@ -58,9 +59,15 @@ class PyExtTypeNameGen(Visitor):
                 self.out += "const "
             
             self.out += "std_map["
-            self.out += PyExtTypeNameGen(compressed=self.compressed).gen(t.kt)
+            self.out += PyExtTypeNameGen(
+                compressed=self.compressed,
+                is_pydecl=self.is_pydecl,
+                is_pytype=self.is_pytype).gen(t.kt)
             self.out += ","
-            self.out += PyExtTypeNameGen(compressed=self.compressed).gen(t.vt)
+            self.out += PyExtTypeNameGen(
+                compressed=self.compressed,
+                is_pydecl=self.is_pydecl,
+                is_pytype=self.is_pytype).gen(t.vt)
             self.out += "]"
         
             if self.is_ret:
@@ -78,9 +85,9 @@ class PyExtTypeNameGen(Visitor):
             else:
                 if not self.compressed:
                     if t.pt == PointerKind.Shared:
-                        self.out += "std_shared_ptr["
+                        self.out += "shared_ptr["
                     elif t.pt == PointerKind.Unique and not self.is_ret:
-                        self.out += "std_unique_ptr["
+                        self.out += "unique_ptr["
                 Visitor.visitTypePointer(self, t)
             
         

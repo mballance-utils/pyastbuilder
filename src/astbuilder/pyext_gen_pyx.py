@@ -24,12 +24,14 @@ class PyExtGenPyx(Visitor):
                  outdir,
                  name, 
                  namespace,
+                 target_pkg,
                  decl_pxd,
                  pxd,
                  pyx):
         self.outdir = outdir
         self.name = name
         self.namespace = namespace
+        self.target_pkg = target_pkg
         self.decl_pxd = decl_pxd
         self.pxd = pxd
         self.pyx = pyx
@@ -45,9 +47,15 @@ class PyExtGenPyx(Visitor):
         PyExtGenPtrDef(self.decl_pxd).gen(ast)
         self.gen_defs(self.pxd)
 #        self.gen_defs(self.pyx)
+
+        pkg_elems = self.target_pkg.split(".")
+        if len(pkg_elems) > 1:
+            self.pxd.println("from %s cimport %s_decl" % (pkg_elems[0], pkg_elems[1]))
+            self.pyx.println("from %s cimport %s_decl" % (pkg_elems[0], pkg_elems[1]))
+        else:
+            self.pxd.println("cimport %s_decl" % self.name)
+            self.pyx.println("cimport %s_decl" % self.name)
         
-        self.pxd.println("cimport %s_decl" % self.name)
-        self.pyx.println("cimport %s_decl" % self.name)
         self.pyx.println("from enum import IntEnum")
         
         for e in ast.enums:
@@ -90,8 +98,7 @@ class PyExtGenPyx(Visitor):
         out.println("from libcpp.cast cimport static_cast")
         out.println("from libcpp.string cimport string as      std_string")
         out.println("from libcpp.map cimport map as            std_map")
-        out.println("from libcpp.memory cimport unique_ptr as  std_unique_ptr")
-        out.println("from libcpp.memory cimport shared_ptr as  std_shared_ptr")
+        out.println("from libcpp.memory cimport unique_ptr, shared_ptr")
         out.println("from libcpp.vector cimport vector as std_vector")
         out.println("from libcpp.utility cimport pair as  std_pair")
         out.println("from libcpp cimport bool as          bool")
@@ -181,22 +188,23 @@ class PyExtGenPyx(Visitor):
         else:
             self.decl_pxd.println("cpdef cppclass I%s:" % c.name)
             
-        # Generate the ctor
         self.decl_pxd.inc_indent()
-        params = self.collect_ctor_params(c)
-        if len(params) == 0:
-            self.decl_pxd.println("%s()" % c.name)
-        else:
-            self.decl_pxd.println("%s(" % c.name)
-            self.decl_pxd.inc_indent()
-            for i,p in enumerate(params):
-                if i > 0:
-                    self.decl_pxd.write(",\n")
-                self.decl_pxd.write(self.decl_pxd.ind)
-                self.decl_pxd.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
-                self.decl_pxd.write(p.name)
-            self.decl_pxd.dec_indent()
-            self.decl_pxd.write(")\n")
+        
+        # # Generate the ctor
+        # params = self.collect_ctor_params(c)
+        # if len(params) == 0:
+        #     self.decl_pxd.println("%s()" % c.name)
+        # else:
+        #     self.decl_pxd.println("%s(" % c.name)
+        #     self.decl_pxd.inc_indent()
+        #     for i,p in enumerate(params):
+        #         if i > 0:
+        #             self.decl_pxd.write(",\n")
+        #         self.decl_pxd.write(self.decl_pxd.ind)
+        #         self.decl_pxd.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
+        #         self.decl_pxd.write(p.name)
+        #     self.decl_pxd.dec_indent()
+        #     self.decl_pxd.write(")\n")
         
         # Generate the wrapper that goes in the .pyx
         if c.super is not None:

@@ -5,6 +5,7 @@ Created on May 28, 2022
 '''
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.type_userdef import TypeUserDef
+from astbuilder.type_pointer import TypePointer
 from astbuilder.ast_enum import AstEnum
 
 class PyExtGenParams(object):
@@ -39,7 +40,7 @@ class PyExtGenParams(object):
         else:
             is_pytype=True
             is_pydecl=False
-            
+
         params = list(filter(lambda d : d.is_ctor, c.data))
         for i,p in enumerate(params):
             if i == 0:
@@ -70,17 +71,33 @@ class PyExtGenParams(object):
             if ret and i == 0:
                 out.write(",\n")
             out.write(out.ind)
-            if isinstance(p.t, TypeUserDef) and isinstance(p.t.target, AstEnum):
-                if i+1<len(params):
-                    t=",\n"
-                else:
-                    t=""
+            print("Param type: %s" % str(p.t))
+            if isinstance(p.t, TypeUserDef):
+                if isinstance(p.t.target, AstEnum):
+                    if i+1<len(params):
+                        t=",\n"
+                    else:
+                        t=""
                     
-                out.write("<%s_decl.%s>(%s_i)%s" % (
-                    name,
-                    p.t.target.name,
-                    p.name,
-                    t))
+                    out.write("<%s_decl.%s>(%s_i)%s" % (
+                        name,
+                        p.t.target.name,
+                        p.name,
+                        t))
+                else:
+                    if i+1<len(params):
+                        t=",\n"
+                    else:
+                        t=""
+                    
+                    out.write("dynamic_cast[%s_decl.I%sP](%s_i._hndl)%s" % (
+                        name,
+                        p.t.target.name,
+                        p.name,
+                        t))
+            elif isinstance(p.t, TypePointer):
+                target = p.t.t.name
+                out.write("%s.as%s()" % (p.name,target) + (",\n" if i+1 < len(params) else ""))
             else:
                 out.write(p.name + (",\n" if i+1 < len(params) else ""))
             ret = True

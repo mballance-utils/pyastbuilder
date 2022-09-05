@@ -12,6 +12,9 @@ class OutStream(object):
         self.ind = ""
         self.out = StringIO()
         
+    def print(self, s=""):
+        self.out.write(self.ind + s)
+
     def println(self, s=""):
         self.out.write(self.ind + s + "\n")
         
@@ -21,12 +24,13 @@ class OutStream(object):
     def content(self):
         return self.out.getvalue()
     
-    def inc_indent(self):
-        self.ind += "    ";
+    def inc_indent(self, amt=1):
+        for _ in range(amt):
+            self.ind += "    ";
         
-    def dec_indent(self):
-        if len(self.ind) > 4:
-            self.ind = self.ind[4:]
+    def dec_indent(self, amt=1):
+        if len(self.ind) > amt*4:
+            self.ind = self.ind[amt*4:]
         else:
             self.ind = ""
 

@@ -128,12 +128,16 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.inc_indent()
         for c in self.ast.classes:
             name = c.name[0].upper() + c.name[1:]
-            self.decl_pxd.write("%sI%s *mk%s(" % (self.decl_pxd.ind, c.name, name))
-            PyExtGenParams.gen_ctor_params(c, self.decl_pxd, is_decl=True, ins_self=False)
-            self.decl_pxd.write(")\n")
-            pass
+            self.decl_pxd.println("I%s *mk%s(" % (c.name, name))
+            self.decl_pxd.inc_indent(2)
+            have_params = PyExtGenParams.gen_ctor_params(c, self.decl_pxd, is_decl=True, ins_self=False)
+            if have_params:
+                self.decl_pxd.write(")\n")
+            else:
+                self.decl_pxd.println(")")
+            self.decl_pxd.dec_indent(2)
+
         self.decl_pxd.dec_indent()
-        
         self.decl_pxd.dec_indent()
         
     def gen_factory(self):
@@ -148,17 +152,21 @@ class PyExtGenPyx(Visitor):
             self.pxd.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
             PyExtGenParams.gen_ctor_params(c, self.pxd, is_decl=False, ins_self=True)
             self.pxd.write(")\n")
-            
-            self.pyx.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
+
+            self.pyx.print("cpdef %s mk%s(" % (c.name, name))
+            self.pyx.inc_indent(2) 
             PyExtGenParams.gen_ctor_params(c, self.pyx, is_decl=False, ins_self=True)
+            self.pyx.dec_indent(2) 
             self.pyx.write("):\n")
             self.pyx.inc_indent()
             PyExtGenParams.gen_ctor_param_temps(c, self.pyx)
             self.pyx.println("return %s.mk(self._hndl.mk%s(" % (c.name, name))
+            self.pyx.inc_indent(2)
             PyExtGenParams.gen_ctor_pvals(self.name, c, self.pyx)
+            self.pyx.dec_indent(2)
             self.pyx.write("), True)\n")
             self.pyx.dec_indent()
-        
+
         self.pyx.println("@staticmethod")
         self.pxd.println("@staticmethod")
         self.pxd.println("cdef mk(%s_decl.IFactory *hndl)" % (self.name,))
@@ -247,6 +255,14 @@ class PyExtGenPyx(Visitor):
             self.pyx.println()
             
             self.pxd.println("cpdef void accept(self, VisitorBase v)")
+
+
+        self.pyx.println("cdef %s_decl.I%s *as%s(self):" % (self.name, c.name, c.name))
+        self.pyx.inc_indent()
+        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl)" % (self.name, c.name))
+        self.pyx.dec_indent()
+
+        self.pxd.println("cdef %s_decl.I%s *as%s(self)" % (self.name, c.name, c.name))
             
         self.pyx.println("@staticmethod")
         self.pyx.println("cdef %s mk(%s_decl.I%s *hndl, bool owned):" % (c.name, self.name, c.name))

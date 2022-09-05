@@ -2,7 +2,7 @@
 import os
 from setuptools import setup, find_namespace_packages
 
-version="0.0.1"
+version="0.0.2"
 
 if "BUILD_NUM" in os.environ.keys():
     version += "." + os.environ["BUILD_NUM"]
@@ -15,6 +15,9 @@ setup(
   author = "Matthew Ballance",
   author_email = "matt.ballance@gmail.com",
   description = ("Utility for generating AST classes from a yaml description"),
+  long_description = """
+  Utility for generating AST classes from a yaml description
+  """,
   license = "Apache 2.0",
   keywords = ["Parsing"],
   url = "https://github.com/mballance/pyastbuilder",

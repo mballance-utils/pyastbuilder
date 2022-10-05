@@ -1,3 +1,5 @@
+
+from .ast_struct import AstStruct
 from astbuilder.visitor import Visitor
 from astbuilder.cpp_type_name_gen import CppTypeNameGen
 from astbuilder.type_scalar import TypeKind
@@ -28,7 +30,8 @@ class CppAccessorGen(Visitor):
         
     def gen(self, field):
         self.field = field
-        
+
+        print("GenAccessor: %s=%s" % (self.field.name, str(self.field.t)))
         self.field.t.accept(self)
 
     def visitTypeList(self, t):
@@ -52,6 +55,48 @@ class CppAccessorGen(Visitor):
             self.gen_string_accessors(t)
         else:
             self.gen_scalar_accessors(t)
+
+    def visitTypeUserDef(self, t):
+        print("GenAccessor: UserDef %s" % str(t.target))
+        if isinstance(t.target, AstStruct):
+            self.decl_struct_accessor(t)
+
+    def decl_struct_accessor(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        
+        # Generate a read-only accessor
+        self.out_h.println(
+            "virtual " + 
+            CppTypeNameGen(compressed=True,is_ret=True,is_ref=True,is_const=True).gen(t) + 
+            "get" + name + "() const override;")
+        self.out_ih.println(
+            "virtual " + 
+            CppTypeNameGen(compressed=True,is_ret=True,is_ref=True,is_const=True).gen(t) + 
+            "get" + name + "() const = 0;")
+        self.out_h.println()
+        self.out_ih.println()
+
+        self.out_cpp.println(
+            CppTypeNameGen(compressed=True,is_ret=True,is_ref=True,is_const=True).gen(t) + 
+                             self.clsname + "::get" + name + "() const {")
+        self.out_cpp.inc_indent()
+        self.out_cpp.println("return m_" + self.field.name + ";")
+        self.out_cpp.dec_indent()
+        self.out_cpp.println("}")
+        self.out_cpp.println()
+        
+        # Generate a non-const accessor
+        self.out_h.println("virtual void set" + name + "(" +
+            CppTypeNameGen(compressed=True,is_ret=False,is_ref=True,is_const=True).gen(t) + "v) override;")
+        self.out_ih.println("virtual void set" + name + "(" +
+            CppTypeNameGen(compressed=True,is_ret=False,is_ref=True,is_const=True).gen(t) + "v) = 0;")
+
+        self.out_cpp.println("void " + self.clsname + "::set" + name + 
+                "(" + CppTypeNameGen(compressed=True,is_ret=False,is_ref=True,is_const=True).gen(t) + "v) {")
+        self.out_cpp.inc_indent()
+        self.out_cpp.println("m_" + self.field.name + " = v;")
+        self.out_cpp.dec_indent()
+        self.out_cpp.println("}")
     
     def gen_collection_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]

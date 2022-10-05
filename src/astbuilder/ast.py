@@ -9,6 +9,8 @@ class Ast(object):
     def __init__(self):
         self.classes = []
         self.class_m = {}
+        self.structs = []
+        self.struct_m = {}
         self.enums = []
         self.enum_m = {}
         self.flags = []
@@ -19,6 +21,14 @@ class Ast(object):
             raise Exception("Class " + c.name + " already declared")
         self.class_m[c.name] = c
         self.classes.append(c)
+
+    def addStruct(self, s):
+        if s.name in self.struct_m.keys():
+            raise Exception("Struct " + s.name + " already declared")
+        if s.name in self.class_m.keys():
+            raise Exception("Struct " + s.name + " already declared as a class")
+        self.struct_m[s.name] = s
+        self.structs.append(s)
         
     def addEnum(self, e):
         if e.name in self.enum_m.keys():

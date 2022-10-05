@@ -35,7 +35,10 @@ class PyExtGenPxd(Visitor):
         self.out.println("from libcpp.vector cimport vector as std_vector")
         self.out.println("from libcpp.utility cimport pair as  std_pair")
         self.out.println("from libcpp cimport bool as          bool")
+        self.gen_typedefs()
 
+
+    def gen_typedefs(self):
         self.out.println("ctypedef char                 int8_t")
         self.out.println("ctypedef unsigned char        uint8_t")
         self.out.println("ctypedef short                int16_t")
@@ -44,6 +47,9 @@ class PyExtGenPxd(Visitor):
         self.out.println("ctypedef unsigned int         uint32_t")
         self.out.println("ctypedef long long            int64_t")
         self.out.println("ctypedef unsigned long long   uint64_t")
+
+        for c in self.ast.classes:
+            self.out.println("ctypedef I%s *I%sP" % (c.name, c.name))
         
     def gen_factory(self):
         if self.namespace is not None:

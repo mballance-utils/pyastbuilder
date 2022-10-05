@@ -51,8 +51,7 @@ class Linker(Visitor):
                 classes.append(ast.classes[i])
                 
         ast.classes = classes
-                
-            
+
         
     def visitAstClass(self, c):
         self.active_class = c
@@ -65,6 +64,10 @@ class Linker(Visitor):
                 ref = AstRef(self.ast.class_m[t.name])
                 self.active_class.deps[t.name] = ref
                 t.target = self.ast.class_m[t.name]
+            elif t.name in self.ast.struct_m.keys():
+                ref = AstRef(self.ast.struct_m[t.name])
+                self.active_class.deps[t.name] = ref
+                t.target = self.ast.struct_m[t.name]
             elif t.name in self.ast.enum_m.keys():
                 ref = AstRef(self.ast.enum_m[t.name])
                 self.active_class.deps[t.name] = ref

@@ -7,6 +7,7 @@ import yaml
 
 from astbuilder.ast import Ast
 from astbuilder.ast_class import AstClass
+from .ast_struct import AstStruct
 from astbuilder.ast_data import AstData
 from astbuilder.ast_enum import AstEnum
 from astbuilder.ast_flags import AstFlags
@@ -30,6 +31,8 @@ class Parser(object):
         for key in doc.keys():
             if key == "classes":
                 self.parse_classes(doc["classes"])
+            elif key == "structs":
+                self.parse_structs(doc["structs"])
             elif key == "enums":
                 self.parse_enums(doc["enums"])
             elif key == "flags":
@@ -56,14 +59,25 @@ class Parser(object):
             if ast_cls.name is None:
                 raise Exception("Failed to get name from cls " + str(cls))
             if cls[ast_cls.name] is not None:
-                for elem in cls[ast_cls.name]:
-                    key = next(iter(elem))
-                    if key == "super":
-                        ast_cls.super = TypeUserDef(elem[key])
-                    elif key == "data":
-                        self.parse_class_data(ast_cls, elem[key])
-                    else:
-                        raise Exception("Unknown class key " + str(key))
+                root = cls[ast_cls.name]
+                if isinstance(root, dict):
+                    print("DICT")
+                    for key in root.keys():
+                        if key == "super":
+                            ast_cls.super = TypeUserDef(root[key])
+                        elif key == "data":
+                            self.parse_class_data(ast_cls, root[key])
+                        else:
+                            raise Exception("Unknown class key " + str(key))
+                elif isinstance(root, list):
+                    for elem in cls[ast_cls.name]:
+                        key = next(iter(elem))
+                        if key == "super":
+                            ast_cls.super = TypeUserDef(elem[key])
+                        elif key == "data":
+                            self.parse_class_data(ast_cls, elem[key])
+                        else:
+                            raise Exception("Unknown class key " + str(key))
         else:
             raise Exception("Unknown class entity type " + str(cls))
                 
@@ -73,9 +87,11 @@ class Parser(object):
         return ast_cls
                 
     def parse_class_data(self, ast_cls, data):
-        
+
+        print("parse_class_data: %s" % ast_cls.name)        
         for elem in data:
             name = next(iter(elem)).strip()
+
             t = None
             is_ctor = True
             init = None
@@ -99,13 +115,67 @@ class Parser(object):
                     
                 if t is None:
                     raise Exception("No type specified for field " + name)
+            elif isinstance(item, dict):
+                for key in item.keys():
+                    if key == "type":
+                        t = self.parse_simple_type(item[key])
+                    elif key == "is_ctor":
+                        is_ctor = bool(item['is_ctor'])
+                    elif key == "init":
+                        init = str(item['init'])
+                    else:
+                        raise Exception("Unknown data-item key " + key)
+                if t is None:
+                    raise Exception("No type specified for field " + name)
             else:
-                raise Exception("Unknown type signature")
+                raise Exception("Unknown type signature \"%s\" for field %s in class %s" % (
+                    str(item), name, ast_cls.name))
 
             is_ctor &= not isinstance(t, TypeList)
             d = AstData(name, t, is_ctor)
             d.init = init
             ast_cls.data.append(d)
+
+    def parse_structs(self, structs):
+        if structs is not None:
+            if not isinstance(structs, list):
+                raise Exception("Expect structs to be a list, not " + str(type(structs)) + " " + str(structs))
+        
+            for e in structs:
+                self.ast.addStruct(self.parse_struct(e))
+            
+    def parse_struct(self, cls):
+
+        if isinstance(cls, str):
+            ast_cls = AstStruct(cls)
+        elif isinstance(cls, dict):
+            ast_cls = AstStruct(next(iter(cls)))
+            if ast_cls.name is None:
+                raise Exception("Failed to get name from cls " + str(cls))
+            if cls[ast_cls.name] is not None:
+                root = cls[ast_cls.name]
+                if isinstance(root, dict):
+                    print("DICT")
+                    for key in root.keys():
+                        if key == "data":
+                            self.parse_class_data(ast_cls, root[key])
+                        else:
+                            raise Exception("Unknown class key " + str(key))
+                elif isinstance(root, list):
+                    for elem in cls[ast_cls.name]:
+                        key = next(iter(elem))
+                        if key == "data":
+                            self.parse_class_data(ast_cls, elem[key])
+                        else:
+                            raise Exception("Unknown class key " + str(key))
+        else:
+            raise Exception("Unknown class entity type " + str(cls))
+                
+        if ast_cls.name is None:
+            raise Exception("No name provided for class")
+
+        return ast_cls
+                
 
     def parse_simple_type(self, item):
         ret = None

@@ -14,8 +14,10 @@ class CppGenFactory(object):
     
     def __init__(self, 
                  outdir,
+                 license,
                  namespace):
         self.outdir = outdir
+        self.license = license
         self.namespace = namespace
         pass
     
@@ -24,7 +26,23 @@ class CppGenFactory(object):
         out_h = OutStream()
         out_ih = OutStream()
         out_cpp = OutStream()
-        
+
+        for name,h in (("Factory.h", out_h), ("IFactory.h", out_ih)):
+            h.println("/****************************************************************************")
+            h.println(" * %s" % name)
+            if self.license is not None:
+                h.write(self.license)
+            h.println(" ****************************************************************************/")
+            h.println("#pragma once")
+            h.println()
+
+        out_cpp.println("/****************************************************************************")
+        out_cpp.println(" * Factory.cpp")
+        if self.license is not None:
+            out_cpp.write(self.license)
+        out_cpp.println(" ****************************************************************************/")
+        out_cpp.println()
+
         self.gen_ih_prelude(out_ih)
         self.gen_h_prelude(out_h)
         self.gen_cpp_prelude(out_cpp)

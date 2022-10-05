@@ -16,6 +16,8 @@ class Visitor(object):
     def visitAst(self, ast : Ast):
         for cls in ast.classes:
             cls.accept(self)
+        for s in ast.structs:
+            s.accept(self)
         for enum in ast.enums:
             enum.accept(self)
         for f in ast.flags:
@@ -25,6 +27,10 @@ class Visitor(object):
         if c.super is not None:
             c.super.accept(self)
         for d in c.data:
+            d.accept(self)
+
+    def visitAstStruct(self, s):
+        for d in s.data:
             d.accept(self)
             
     def visitAstData(self, d : AstData):

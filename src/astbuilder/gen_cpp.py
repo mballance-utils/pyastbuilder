@@ -10,6 +10,7 @@ from astbuilder.ast import Ast
 from astbuilder.ast_class import AstClass
 from astbuilder.ast_enum import AstEnum
 from astbuilder.ast_flags import AstFlags
+from .ast_struct import AstStruct
 from astbuilder.gen_cpp_visitor import GenCppVisitor
 from astbuilder.outstream import OutStream
 from astbuilder.type_list import TypeList
@@ -50,6 +51,7 @@ class GenCPP(Visitor):
             
         CppGenFactory(
             self.outdir,
+            self.license,
             self.namespace).gen(ast)
             
         ast.accept(self)
@@ -84,7 +86,20 @@ class GenCPP(Visitor):
             
         with open(os.path.join(incdir, "I%s.h" % c.name), "w") as f:
             f.write(inc_h.content())
-            
+
+    def visitAstStruct(self, s):
+        h = OutStream()
+
+        self.define_struct(s, h)
+
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)
+
+        if not os.path.isdir(self.outdir):
+            os.makedirs(self.outdir)
+
+        with open(os.path.join(incdir, "%s.h" % s.name), "w") as f:
+            f.write(h.content())
+
     def visitAstEnum(self, e:AstEnum):
         out_h = OutStream()
         out_h.println("/****************************************************************************")
@@ -180,6 +195,10 @@ class GenCPP(Visitor):
             out_inc_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h"%c.super.name))
             out_h.println()
             out_inc_h.println()
+        for key,d in c.deps.items():
+            if isinstance(d.target, (AstEnum,AstStruct)):
+                out_icls.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
+#                out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
 
         CppGenNS.enter(self.namespace, out_cls)
         CppGenNS.enter(self.namespace, out_icls)
@@ -193,8 +212,8 @@ class GenCPP(Visitor):
                 out_icls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
                 out_cls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
                 out_icls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
-            elif isinstance(d.target, AstEnum):
-                out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
+            elif isinstance(d.target, (AstEnum,AstStruct)):
+                pass
             else:
                 raise Exception("Unknown ref " + str(d.target))
 
@@ -621,6 +640,43 @@ class GenCPP(Visitor):
 #                                 ("," if i+1 < len(params) else " {"))
 #             out_cpp.dec_indent()
 #             out_cpp.dec_indent()        
+
+    def define_struct(self, s, h):
+        h.println("/****************************************************************************")
+        h.println(" * " + s.name + ".h")
+        if self.license is not None:
+            h.write(self.license)
+        h.println(" ****************************************************************************/")
+        h.println("#pragma once")
+        h.println("#include <stdint.h>")
+        h.println("#include <map>")
+        h.println("#include <memory>")
+        h.println("#include <set>")
+        h.println("#include <string>")
+        h.println("#include <vector>")
+        h.println()
+
+        CppGenNS.enter(self.namespace, h)
+
+        h.println()
+        h.println("struct %s {" % s.name)
+        h.inc_indent()
+        for f in s.data:
+            if f.init is not None:
+                h.println("%s %s = %s;" % (
+                    CppTypeNameGen(True).gen(f.t),
+                    f.name,
+                    f.init))
+            else:
+                h.println(CppTypeNameGen(True).gen(f.t) + " " + f.name + ";")
+        h.dec_indent()
+        h.println("};")
+
+        h.println()
+
+        CppGenNS.leave(self.namespace, h)
+
+        pass
     
     def gen_cmake(self, ast):
         out = OutStream()

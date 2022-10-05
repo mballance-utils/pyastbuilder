@@ -65,7 +65,7 @@ class PyExtGenPyx(Visitor):
             else:
                 self.decl_pxd.println("cdef extern from \"%s.h\":" % e.name)
 
-            self.decl_pxd.inc_indent()                
+            self.decl_pxd.inc_indent()
             self.decl_pxd.println("cdef enum %s:" % e.name)
             self.decl_pxd.inc_indent()
 
@@ -263,7 +263,7 @@ class PyExtGenPyx(Visitor):
         self.pyx.dec_indent()
 
         self.pxd.println("cdef %s_decl.I%s *as%s(self)" % (self.name, c.name, c.name))
-            
+
         self.pyx.println("@staticmethod")
         self.pyx.println("cdef %s mk(%s_decl.I%s *hndl, bool owned):" % (c.name, self.name, c.name))
         self.pyx.inc_indent()

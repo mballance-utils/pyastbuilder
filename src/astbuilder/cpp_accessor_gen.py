@@ -1,4 +1,6 @@
 
+from .ast_enum import AstEnum
+from .ast_flags import AstFlags
 from .ast_struct import AstStruct
 from astbuilder.visitor import Visitor
 from astbuilder.cpp_type_name_gen import CppTypeNameGen
@@ -60,6 +62,8 @@ class CppAccessorGen(Visitor):
         print("GenAccessor: UserDef %s" % str(t.target))
         if isinstance(t.target, AstStruct):
             self.decl_struct_accessor(t)
+        elif isinstance(t.target, (AstEnum,AstFlags)):
+            self.gen_scalar_accessors(t)
 
     def decl_struct_accessor(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]

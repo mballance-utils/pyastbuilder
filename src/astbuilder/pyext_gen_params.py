@@ -7,6 +7,7 @@ from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.type_pointer import TypePointer
 from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 
 class PyExtGenParams(object):
     
@@ -18,7 +19,7 @@ class PyExtGenParams(object):
             
         params = list(filter(lambda d : d.is_ctor, c.data))
         for p in params:
-            if isinstance(p.t, TypeUserDef) and isinstance(p.t.target, AstEnum):
+            if isinstance(p.t, TypeUserDef) and isinstance(p.t.target, (AstEnum,AstFlags)):
                 out.println("cdef int %s_i = int(%s)" % (p.name, p.name))
     
     @classmethod
@@ -73,7 +74,9 @@ class PyExtGenParams(object):
             out.write(out.ind)
             print("Param type: %s" % str(p.t))
             if isinstance(p.t, TypeUserDef):
-                if isinstance(p.t.target, AstEnum):
+                if p.t.target is None:
+                    print("Failed to resolve type %s" % p.t.name)
+                if isinstance(p.t.target, (AstEnum,AstFlags)):
                     if i+1<len(params):
                         t=",\n"
                     else:

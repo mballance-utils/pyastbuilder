@@ -140,15 +140,59 @@ class GenCPP(Visitor):
 
         CppGenNS.enter(self.namespace, out_h)
         
-        out_h.println("typedef uint32_t " + f.name + ";")
-        
+        out_h.println("enum class " + f.name + " {")
+
+        out_h.inc_indent()
+        out_h.println("NoFlags = 0,")
         for i,v in enumerate(f.values):
-            out_h.println("static const " + f.name + " " + v + " = (1 << " + str(i) + ");")
+            if i+1 < len(f.values):
+                out_h.println(v + " = (1 << " + str(i) + "),")
+            else:
+                out_h.println(v + " = (1 << " + str(i) + ")")
+        out_h.dec_indent()
+
+        out_h.println("};")
+        out_h.println()
+
+        out_h.println("static inline %s operator | (const %s lhs, const %s rhs) {" % (
+            f.name, f.name, f.name))
+        out_h.inc_indent()
+        out_h.println("return static_cast<%s>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));" % (
+            f.name))
+        out_h.dec_indent()
+        out_h.println("}")
+        out_h.println()
+
+        out_h.println("static inline %s operator |= (%s &lhs, const %s rhs) {" % (
+            f.name, f.name, f.name))
+        out_h.inc_indent()
+        out_h.println("lhs = static_cast<%s>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));" % (
+            f.name))
+        out_h.println("return lhs;")
+        out_h.dec_indent()
+        out_h.println("}")
+        out_h.println()
+
+        out_h.println("static inline %s operator & (const %s lhs, const %s rhs) {" % (
+            f.name, f.name, f.name))
+        out_h.inc_indent()
+        out_h.println("return static_cast<%s>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));" % f.name)
+        out_h.dec_indent()
+        out_h.println("}")
+        out_h.println()
+
+        out_h.println("static inline %s operator ~ (const %s lhs) {" % (f.name, f.name))
+        out_h.inc_indent()
+        out_h.println("return static_cast<%s>(~static_cast<uint32_t>(lhs));" % f.name)
+        out_h.dec_indent()
+        out_h.println("}")
+        out_h.println()
 
         CppGenNS.leave(self.namespace, out_h)        
         
-        with open(os.path.join(self.outdir, f.name + ".h"), "w") as f:
-            f.write(out_h.content())
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)
+        with open(os.path.join(incdir, f.name + ".h"), "w") as fp:
+            fp.write(out_h.content())
             
     def define_class(self, c, out_h, out_inc_h, out_cpp):
         # Class body output stream
@@ -196,7 +240,7 @@ class GenCPP(Visitor):
             out_h.println()
             out_inc_h.println()
         for key,d in c.deps.items():
-            if isinstance(d.target, (AstEnum,AstStruct)):
+            if isinstance(d.target, (AstEnum,AstFlags,AstStruct)):
                 out_icls.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
 #                out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
 
@@ -212,7 +256,7 @@ class GenCPP(Visitor):
                 out_icls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
                 out_cls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
                 out_icls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
-            elif isinstance(d.target, (AstEnum,AstStruct)):
+            elif isinstance(d.target, (AstEnum,AstStruct,AstFlags)):
                 pass
             else:
                 raise Exception("Unknown ref " + str(d.target))
@@ -406,7 +450,7 @@ class GenCPP(Visitor):
                 out_cls.println("class " + key + ";")
                 out_cls.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
                 out_cls.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
-            elif isinstance(d.target, AstEnum):
+            elif isinstance(d.target, (AstEnum,AstFlags)):
                 out_h.println("#include \"" + key + ".h\"")
             else:
                 raise Exception("Unknown ref " + str(d.target))

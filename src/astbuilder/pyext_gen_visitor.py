@@ -4,6 +4,7 @@ Created on Mar 23, 2021
 @author: mballance
 '''
 from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 from astbuilder.cpp_gen_ns import CppGenNS
 from astbuilder.visitor import Visitor
 

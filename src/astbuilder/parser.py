@@ -239,9 +239,11 @@ class Parser(object):
     def parse_flags(self, flags):
         
         for f in flags:
-            ast_f = AstFlags(next(iter(f)))
+#            print("flag: " + str(f))
+            ast_f = AstFlags(next(iter(f.keys())))
         
             for fv in f[ast_f.name]:
+#                print("fv: %s" % str(fv))
                 if isinstance(fv, str):
                     ast_f.values.append(fv)
                 elif isinstance(fv, dict):

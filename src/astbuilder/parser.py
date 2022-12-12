@@ -95,6 +95,7 @@ class Parser(object):
             t = None
             is_ctor = True
             init = None
+            visit = True
             item = elem[name]
             
             if isinstance(item, str):
@@ -110,6 +111,8 @@ class Parser(object):
                         is_ctor = bool(it['is_ctor'])
                     elif key == "init":
                         init = str(it['init'])
+                    elif key == "visit":
+                        visit = bool(it['visit'])
                     else:
                         raise Exception("Unknown data-item key " + key)
                     
@@ -123,6 +126,8 @@ class Parser(object):
                         is_ctor = bool(item['is_ctor'])
                     elif key == "init":
                         init = str(item['init'])
+                    elif key == "visit":
+                        visit = bool(item['visit'])
                     else:
                         raise Exception("Unknown data-item key " + key)
                 if t is None:
@@ -134,6 +139,7 @@ class Parser(object):
             is_ctor &= not isinstance(t, TypeList)
             d = AstData(name, t, is_ctor)
             d.init = init
+            d.visit = visit
             ast_cls.data.append(d)
 
     def parse_structs(self, structs):

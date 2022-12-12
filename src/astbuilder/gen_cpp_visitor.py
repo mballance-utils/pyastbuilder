@@ -138,6 +138,8 @@ class GenCppVisitor(Visitor):
         if c.super is not None:
             out_cpp.println("visit" + c.super.target.name + "(i);")
         for d in c.data:
+            if not d.visit:
+                continue
             name = d.name[0].upper() + d.name[1:]
             if isinstance(d.t, TypeList):
                 # Generate an iterator, as long as the

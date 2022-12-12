@@ -11,6 +11,7 @@ class AstData(object):
         self.t = t
         self.is_ctor = is_ctor
         self.init = None
+        self.visit = True
         
     def accept(self, v):
         v.visitAstData(self)

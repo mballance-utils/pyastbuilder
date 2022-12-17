@@ -23,25 +23,24 @@ class PyExtGenParams(object):
                 out.println("cdef int %s_i = int(%s)" % (p.name, p.name))
     
     @classmethod
-    def gen_ctor_params(cls, c, out, is_decl, ins_self):
+    def gen_ctor_params(cls, 
+        ns, 
+        c, 
+        out, 
+        is_pydecl,  # Are we in a .pxd?
+        is_pytype,  # Are we referring to a Python type (vs import)
+        ins_self):
         """Returns True if this level (or a previous level) added content"""
         ret = False
             
         if c.super is not None:
             # Recurse first
-            ret |= cls.gen_ctor_params(c.super.target, out, is_decl, ins_self)
+            ret |= cls.gen_ctor_params(ns, c.super.target, out, is_pydecl, is_pytype, ins_self)
             
         if ins_self and not ret:
             out.write("self")
             ret = True
             
-        if is_decl:
-            is_pytype=False
-            is_pydecl=True
-        else:
-            is_pytype=True
-            is_pydecl=False
-
         params = list(filter(lambda d : d.is_ctor, c.data))
         for i,p in enumerate(params):
             if i == 0:
@@ -51,6 +50,7 @@ class PyExtGenParams(object):
                     out.write(",\n")
             out.write(out.ind)
             out.write(PyExtTypeNameGen(
+                ns=ns,
                 compressed=True,
                 is_pytype=is_pytype,
                 is_pydecl=is_pydecl,

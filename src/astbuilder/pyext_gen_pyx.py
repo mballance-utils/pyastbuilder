@@ -3,7 +3,7 @@ Created on Mar 22, 2021
 
 @author: mballance
 '''
-import os
+import itertools
 
 from astbuilder.ast_class import AstClass
 from astbuilder.ast_data import AstData
@@ -58,7 +58,7 @@ class PyExtGenPyx(Visitor):
         
         self.pyx.println("from enum import IntEnum")
         
-        for e in ast.enums:
+        for e in itertools.chain(ast.enums, ast.flags):
             if self.namespace is not None:
                 self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
                     CppGenNS.incpath(self.namespace, "%s.h"%e.name), self.namespace))
@@ -130,7 +130,8 @@ class PyExtGenPyx(Visitor):
             name = c.name[0].upper() + c.name[1:]
             self.decl_pxd.println("I%s *mk%s(" % (c.name, name))
             self.decl_pxd.inc_indent(2)
-            have_params = PyExtGenParams.gen_ctor_params(c, self.decl_pxd, is_decl=True, ins_self=False)
+            have_params = PyExtGenParams.gen_ctor_params(
+                self.name, c, self.decl_pxd, is_pydecl=False, is_pytype=False, ins_self=False)
             if have_params:
                 self.decl_pxd.write(")\n")
             else:
@@ -150,12 +151,14 @@ class PyExtGenPyx(Visitor):
         for c in self.ast.classes:
             name = c.name[0].upper() + c.name[1:]
             self.pxd.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
-            PyExtGenParams.gen_ctor_params(c, self.pxd, is_decl=False, ins_self=True)
+            PyExtGenParams.gen_ctor_params(
+                self.name, c, self.pxd, is_pydecl=True, is_pytype=True, ins_self=True)
             self.pxd.write(")\n")
 
             self.pyx.print("cpdef %s mk%s(" % (c.name, name))
             self.pyx.inc_indent(2) 
-            PyExtGenParams.gen_ctor_params(c, self.pyx, is_decl=False, ins_self=True)
+            PyExtGenParams.gen_ctor_params(
+                self.name, c, self.pyx, is_pydecl=False, is_pytype=True, ins_self=True)
             self.pyx.dec_indent(2) 
             self.pyx.write("):\n")
             self.pyx.inc_indent()
@@ -192,32 +195,20 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.inc_indent()
         
         if c.super is not None:
-            self.decl_pxd.println("cpdef cppclass I%s(I%s):" % (c.name, PyExtTypeNameGen().gen(c.super)))
+            self.decl_pxd.println("cpdef cppclass I%s(I%s):" % (
+                c.name, 
+                PyExtTypeNameGen(ns=self.name).gen(c.super)))
         else:
             self.decl_pxd.println("cpdef cppclass I%s:" % c.name)
             
         self.decl_pxd.inc_indent()
         
-        # # Generate the ctor
-        # params = self.collect_ctor_params(c)
-        # if len(params) == 0:
-        #     self.decl_pxd.println("%s()" % c.name)
-        # else:
-        #     self.decl_pxd.println("%s(" % c.name)
-        #     self.decl_pxd.inc_indent()
-        #     for i,p in enumerate(params):
-        #         if i > 0:
-        #             self.decl_pxd.write(",\n")
-        #         self.decl_pxd.write(self.decl_pxd.ind)
-        #         self.decl_pxd.write(PyExtTypeNameGen(compressed=True,is_ret=True).gen(p.t) + " ")
-        #         self.decl_pxd.write(p.name)
-        #     self.decl_pxd.dec_indent()
-        #     self.decl_pxd.write(")\n")
-        
         # Generate the wrapper that goes in the .pyx
         if c.super is not None:
-            self.pyx.println("cdef class %s(%s):" % (c.name, PyExtTypeNameGen(is_pytype=True).gen(c.super)))
-            self.pxd.println("cdef class %s(%s):" % (c.name, PyExtTypeNameGen(is_pytype=True).gen(c.super)))
+            self.pyx.println("cdef class %s(%s):" % (
+                c.name, PyExtTypeNameGen(ns=self.name,is_pytype=True).gen(c.super)))
+            self.pxd.println("cdef class %s(%s):" % (
+                c.name, PyExtTypeNameGen(self.name, is_pytype=True).gen(c.super)))
         else:
             self.pyx.println("cdef class %s(object):" % c.name)
             self.pxd.println("cdef class %s(object):" % c.name)
@@ -233,11 +224,6 @@ class PyExtGenPyx(Visitor):
         self.pyx.println()
         self.pxd.println()
             
-#        self.pyx.println("def __init__(self):")
-#        self.pyx.inc_indent()
-#        self.pyx.println("self._owned = False")
-#        self.pyx.dec_indent()
-        
         if c.super is None:
             self.pyx.println("def __dealloc__(self):")
             self.pyx.inc_indent()
@@ -350,7 +336,7 @@ class PyExtGenPyx(Visitor):
             if ret and i == 0:
                 out.write(",\n")
             out.write(out.ind)
-            out.write(PyExtTypeNameGen(compressed=True,is_pyx=is_pyx, is_ret=True).gen(p.t) + " ")
+            out.write(PyExtTypeNameGen(ns=self.name,compressed=True,is_pyx=is_pyx, is_ret=True).gen(p.t) + " ")
             out.write(p.name + (",\n" if i+1 < len(params) else ""))
             ret = True
         

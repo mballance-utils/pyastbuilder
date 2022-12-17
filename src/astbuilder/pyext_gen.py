@@ -11,7 +11,6 @@ from astbuilder.visitor import Visitor
 from astbuilder.type_pointer import TypePointer
 from astbuilder.pyext_accessor_gen import PyExtAccessorGen
 import os
-from astbuilder.pyext_gen_pxd import PyExtGenPxd
 from astbuilder.pyext_gen_extdef import PyExtGenExtDef
 from astbuilder.pyext_gen_pyx import PyExtGenPyx
 from astbuilder.pyext_gen_visitor import PyExtGenVisitor

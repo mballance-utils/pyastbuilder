@@ -5,11 +5,13 @@ from astbuilder.type_scalar import TypeScalar, TypeKind
 from .type_pointer import TypePointer
 from .visitor import Visitor
 from astbuilder.ast_enum import AstEnum
+from astbuilder.ast_flags import AstFlags
 
 
 class PyExtTypeNameGen(Visitor):
     
     def __init__(self, 
+                 ns,
                  compressed=False, 
                  is_pytype=False,
                  is_pydecl=False,
@@ -18,6 +20,7 @@ class PyExtTypeNameGen(Visitor):
                  is_ptr=False,
                  is_const=False):
         self.out = ""
+        self.ns = ns
 #        self.compressed = compressed
         self.compressed = False
         self.is_pytype = is_pytype
@@ -32,6 +35,33 @@ class PyExtTypeNameGen(Visitor):
         self.out = ""
         t.accept(self)
         return self.out
+
+    def visitAstEnum(self, e : AstEnum):
+        print("is_pydecl=%s is_pytype=%s" % (self.is_pydecl, self.is_pytype))
+        # Enums are a strange case
+        # - When referenced in _decl.pxd as a parameter (pdecl=True,ptype=False), we have a simple name
+        # - When referenced in .pxd/.pyx as a parameter (pdecl=True,ptype=True), we omit the type
+        # is_pytype - this refers to a user-facing Python type
+        # is_pydecl - 
+        if self.is_pydecl and self.is_pytype:
+            # In a .pxd file referring to a Python type (empty for Enum)
+            pass
+        elif not self.is_pydecl and self.is_pytype:
+            # In a .pyx file referring to a non-Python type (namespace-qualified)
+            # Note: Unsure we do this
+            self.out += self.ns + "."
+            self.out += e.name
+        elif self.is_pydecl and not self.is_pytype:
+            # We're in a declaration scope (unclear .pxd or _decl.pxd) using the non-Python type
+            self.out += e.name
+            pass
+        elif not self.is_pydecl and not self.is_pytype:
+            # We're in the _decl.pxd using a non-Python type
+            self.out += e.name
+    
+    def visitAstFlags(self, f : AstFlags):
+        if not self.is_pytype:
+            self.out += f.name
     
     def visitTypeList(self, t):
         if self.depth == 0:
@@ -41,6 +71,7 @@ class PyExtTypeNameGen(Visitor):
             
             self.out += "std_vector["
             self.out += PyExtTypeNameGen(
+                ns=self.ns,
                 compressed=self.compressed,
                 is_pytype=self.is_pytype,
                 is_pydecl=self.is_pydecl).gen(t.t)
@@ -50,7 +81,7 @@ class PyExtTypeNameGen(Visitor):
                 self.out += " &"
             self.depth -= 1
         else:
-            self.out += PyExtTypeNameGen().gen(t)
+            self.out += PyExtTypeNameGen(ns=self.ns).gen(t)
 
     def visitTypeMap(self, t):
         if self.depth == 0:
@@ -60,11 +91,13 @@ class PyExtTypeNameGen(Visitor):
             
             self.out += "std_map["
             self.out += PyExtTypeNameGen(
+                ns=self.ns,
                 compressed=self.compressed,
                 is_pydecl=self.is_pydecl,
                 is_pytype=self.is_pytype).gen(t.kt)
             self.out += ","
             self.out += PyExtTypeNameGen(
+                ns=self.ns,
                 compressed=self.compressed,
                 is_pydecl=self.is_pydecl,
                 is_pytype=self.is_pytype).gen(t.vt)
@@ -74,7 +107,7 @@ class PyExtTypeNameGen(Visitor):
                 self.out += " &"
             self.depth -= 1
         else:
-            self.out += PyExtTypeNameGen().gen(t)            
+            self.out += PyExtTypeNameGen(ns=self.ns).gen(t)
         
     def visitTypePointer(self, t : TypePointer):
         if self.depth == 0:
@@ -112,7 +145,7 @@ class PyExtTypeNameGen(Visitor):
                     self.out += " *"
             self.depth -= 1
         else:
-            self.out += PyExtTypeNameGen().gen(t)
+            self.out += PyExtTypeNameGen(ns=self.ns).gen(t)
 
     def visitTypeScalar(self, t : TypeScalar):
         vmap = {
@@ -134,23 +167,29 @@ class PyExtTypeNameGen(Visitor):
             self.out += " &"
     
     def visitTypeUserDef(self, t):
-        if self.is_const:
-            self.out += "const "
-        if not isinstance(t.target, AstEnum):
-            if self.is_pydecl:
-                self.out += "I%s" % t.name
-            else:
-                self.out += "%s" % t.name
+        print("PyExtTyeNameGen: TypeUserDef")
+
+        if isinstance(t.target, (AstEnum,AstFlags)):
+            t.target.accept(self)
         else:
-            # Type names are omitted in Pyx
-            if self.is_pydecl:
-                self.out += t.name
-        if self.is_ptr:
-            if not self.is_pytype:
-                self.out += "P "
-            else:
-                self.out += " "
-        if self.is_ref:
-            self.out += " &"
+            if self.is_const:
+               self.out += "const "
+
+            if self.is_pydecl and self.is_pytype:
+                self.out += "%s" % t.name
+            elif not self.is_pydecl and self.is_pytype:
+                self.out += "%s" % t.name
+            elif self.is_pydecl and not self.is_pytype:
+                self.out += "%s.I%s" % (self.ns, t.name)
+            elif not self.is_pydecl and not self.is_pytype:
+                self.out += "I%s" % t.name
+
+            if self.is_ptr:
+                if not self.is_pytype:
+                    self.out += "P "
+                else:
+                    self.out += " "
+            if self.is_ref:
+                self.out += " &"
         
         

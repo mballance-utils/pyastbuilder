@@ -112,12 +112,13 @@ class PyExtGenVisitor(Visitor):
         self.hpp.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "impl/VisitorBase.h"))
 
         print("TARGET_PKG: %s" % self.target_pkg)        
-        if self.target_pkg.find('.') != -1:
-            self.hpp.println("#include \"%s_api.h\"" % self.target_pkg[self.target_pkg.find('.')+1:])
-        else:
-            self.hpp.println("#include \"%s_api.h\"" % self.target_pkg)
-        
+        self.hpp.println("#include <Python.h>")
         self.cpp.println("#include \"PyBaseVisitor.h\"")
+        if self.target_pkg.find('.') != -1:
+            self.cpp.println("#include \"%s_api.h\"" % self.target_pkg[self.target_pkg.find('.')+1:])
+        else:
+            self.cpp.println("#include \"%s_api.h\"" % self.target_pkg)
+        
 
         CppGenNS.enter(self.namespace, self.hpp)        
         CppGenNS.enter(self.namespace, self.cpp)

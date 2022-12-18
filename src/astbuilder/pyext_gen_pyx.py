@@ -58,7 +58,7 @@ class PyExtGenPyx(Visitor):
         
         self.pyx.println("from enum import IntEnum")
         
-        for e in itertools.chain(ast.enums, ast.flags):
+        for e in ast.enums:
             if self.namespace is not None:
                 self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
                     CppGenNS.incpath(self.namespace, "%s.h"%e.name), self.namespace))
@@ -74,18 +74,46 @@ class PyExtGenPyx(Visitor):
                         
             for i,v in enumerate(e.values):
                 if self.namespace is not None:
-                    self.decl_pxd.println("%s \"%s\"" % (
-                        v[0], self.namespace + "::" + e.name + "::" + v[0]))
+                    self.decl_pxd.println("%s_%s \"%s\"" % (
+                        e.name, v[0], self.namespace + "::" + e.name + "::" + v[0]))
                 else:
-                    self.decl_pxd.println("%s \"%s\"" % (
-                        v[0], e.name + "::" + v[0]))
-                self.pyx.println("%s = %s_decl.%s.%s" % (
-                    v[0], self.name, e.name, v[0]))
+                    self.decl_pxd.println("%s_%s \"%s\"" % (
+                        e.name, v[0], e.name + "::" + v[0]))
+                self.pyx.println("%s = %s_decl.%s.%s_%s" % (
+                    v[0], self.name, e.name, e.name, v[0]))
                 
             self.decl_pxd.dec_indent()                
             self.decl_pxd.dec_indent()                
             self.pyx.dec_indent()
-        
+
+        for e in ast.flags:
+            if self.namespace is not None:
+                self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
+                    CppGenNS.incpath(self.namespace, "%s.h"%e.name), self.namespace))
+            else:
+                self.decl_pxd.println("cdef extern from \"%s.h\":" % e.name)
+
+            self.decl_pxd.inc_indent()
+            self.decl_pxd.println("cdef enum %s:" % e.name)
+            self.decl_pxd.inc_indent()
+
+            self.pyx.println("class %s(IntEnum):" % e.name)
+            self.pyx.inc_indent()
+                        
+            for i,v in enumerate(e.values):
+                if self.namespace is not None:
+                    self.decl_pxd.println("%s_%s \"%s\"" % (
+                        e.name, v, self.namespace + "::" + e.name + "::" + v))
+                else:
+                    self.decl_pxd.println("%s_%s \"%s\"" % (
+                        e.name, v, e.name + "::" + v))
+                self.pyx.println("%s = %s_decl.%s.%s_%s" % (
+                    v, self.name, e.name, e.name, v))
+                
+            self.decl_pxd.dec_indent()                
+            self.decl_pxd.dec_indent()                
+            self.pyx.dec_indent()
+
         self.gen_factory_decl()
         self.gen_factory()
         

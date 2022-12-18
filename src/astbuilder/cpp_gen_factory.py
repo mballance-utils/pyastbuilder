@@ -14,9 +14,11 @@ class CppGenFactory(object):
     
     def __init__(self, 
                  outdir,
+                 name,
                  license,
                  namespace):
         self.outdir = outdir
+        self.name = name
         self.license = license
         self.namespace = namespace
         pass
@@ -53,8 +55,13 @@ class CppGenFactory(object):
         
         out_ih.dec_indent()
         out_h.dec_indent()
+
+        self.gen_inst(out_h, out_cpp)
+
         out_ih.println("};")
         out_h.println("};")
+
+        self.gen_inst_accessor(out_h, out_cpp)
         
         CppGenNS.leave(self.namespace, out_ih)
         CppGenNS.leave(self.namespace, out_h)
@@ -129,6 +136,43 @@ class CppGenFactory(object):
             out_cpp.dec_indent()
             out_cpp.println("}")
         pass
+
+    def gen_inst(self, out_h, out_cpp):
+        out_h.println()
+        out_h.inc_indent()
+        out_h.println("static IFactory *inst();")
+        out_h.println()
+        out_h.dec_indent()
+        out_h.println("private:")
+        out_h.inc_indent()
+        out_h.println("static std::unique_ptr<Factory>      m_inst;")
+        out_h.dec_indent()
+
+        out_cpp.println()
+        out_cpp.println("IFactory *Factory::inst() {")
+        out_cpp.inc_indent()
+        out_cpp.println("if (!m_inst) {")
+        out_cpp.inc_indent()
+        out_cpp.println("m_inst = std::unique_ptr<Factory>(new Factory());")
+        out_cpp.dec_indent()
+        out_cpp.println("}")
+        out_cpp.println("return m_inst.get();")
+        out_cpp.dec_indent()
+        out_cpp.println("}")
+        pass
+
+    def gen_inst_accessor(self, out_h, out_cpp):
+        out_cpp.println("std::unique_ptr<Factory> Factory::m_inst;")
+        out_cpp.println()
+        if self.namespace is not None:
+            out_cpp.println("extern \"C\" %s::IFactory *get_%s_Factory() {" % (
+                self.namespace, self.name))
+        else:
+            out_cpp.println("extern \"C\" IFactory *get_%s_Factory() {" % (self.name,))
+        out_cpp.inc_indent()
+        out_cpp.println("return Factory::inst();")
+        out_cpp.dec_indent()
+        out_cpp.println("}")
 
 
     

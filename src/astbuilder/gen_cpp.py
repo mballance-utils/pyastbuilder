@@ -51,6 +51,7 @@ class GenCPP(Visitor):
             
         CppGenFactory(
             self.outdir,
+            self.name,
             self.license,
             self.namespace).gen(ast)
             

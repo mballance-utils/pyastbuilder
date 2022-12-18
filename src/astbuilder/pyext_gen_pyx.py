@@ -195,9 +195,9 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.inc_indent()
         
         if c.super is not None:
-            self.decl_pxd.println("cpdef cppclass I%s(I%s):" % (
+            self.decl_pxd.println("cpdef cppclass I%s(%s):" % (
                 c.name, 
-                PyExtTypeNameGen(ns=self.name).gen(c.super)))
+                PyExtTypeNameGen(ns=self.name,is_pytype=False,is_pydecl=False).gen(c.super)))
         else:
             self.decl_pxd.println("cpdef cppclass I%s:" % c.name)
             

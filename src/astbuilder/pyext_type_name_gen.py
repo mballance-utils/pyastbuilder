@@ -47,10 +47,11 @@ class PyExtTypeNameGen(Visitor):
             # In a .pxd file referring to a Python type (empty for Enum)
             pass
         elif not self.is_pydecl and self.is_pytype:
-            # In a .pyx file referring to a non-Python type (namespace-qualified)
+            # In a .pyx file referring to a Python type (empty for Enum)
             # Note: Unsure we do this
-            self.out += self.ns + "."
-            self.out += e.name
+#            self.out += self.ns + "."
+#            self.out += e.name
+            pass
         elif self.is_pydecl and not self.is_pytype:
             # We're in a declaration scope (unclear .pxd or _decl.pxd) using the non-Python type
             self.out += e.name
@@ -122,7 +123,6 @@ class PyExtTypeNameGen(Visitor):
                     elif t.pt == PointerKind.Unique and not self.is_ret:
                         self.out += "unique_ptr["
                 Visitor.visitTypePointer(self, t)
-            
         
                 if t.pt == PointerKind.Shared or t.pt == PointerKind.Unique:
                     if not self.compressed:
@@ -130,7 +130,7 @@ class PyExtTypeNameGen(Visitor):
                             if t.pt == PointerKind.Shared:
                                 self.out += "]"
                             else:
-                                self.out += "*"
+                                self.out += "P"
                         else:
                             self.out += "]"
                     else:
@@ -138,14 +138,17 @@ class PyExtTypeNameGen(Visitor):
                             if t.pt == PointerKind.Shared:
                                 self.out += "SP"
                             else:
-                                self.out += "*"
+                                self.out += "P"
                         else:
                             self.out += "SP" if t.pt == PointerKind.Shared else "UP"
                 else:
-                    self.out += " *"
+                    self.out += "P"
             self.depth -= 1
         else:
-            self.out += PyExtTypeNameGen(ns=self.ns).gen(t)
+            self.out += PyExtTypeNameGen(
+                ns=self.ns,
+                is_pytype=self.is_pytype,
+                is_pydecl=self.is_pydecl).gen(t)
 
     def visitTypeScalar(self, t : TypeScalar):
         vmap = {

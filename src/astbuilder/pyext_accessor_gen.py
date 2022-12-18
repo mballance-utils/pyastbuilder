@@ -57,6 +57,12 @@ class PyExtAccessorGen(Visitor):
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
 
+    def visitAstClass(self, c):
+        self.gen_class_accessors(c)
+
+    def visitAstStruct(self, s):
+        print("TODO: gen struct accessor")
+
     def visitAstEnum(self, e : AstEnum):
         self.gen_enum_accessors(e)
     
@@ -82,13 +88,21 @@ class PyExtAccessorGen(Visitor):
 #        self.decl_pxd.println()
 
         # Generate a non-const accessor
-        self.decl_pxd.println(self.nonconst_ref_ret(t, is_pydecl=True) + "get" + name + "();")
+        self.decl_pxd.println(self.nonconst_ref_ret(
+            t, 
+            is_pydecl=False,
+            is_pytype=False) + "get" + name + "();")
         
 #         self.pyx.println("cdef %s get_%s():" % (self.nonconst_ref_ret(t), self.field.name))
 #         self.pyx.inc_indent()
 #         self.pyx.println("return (<%s_decl.%s *>self._hndl).get_%s()" %
 #                          (self.name, self.clsname, self.field.name))
 #         self.pyx.dec_indent()
+
+    def gen_class_accessors(self, c):
+        print("TODO: class accessor")
+        pass
+
 
     def gen_enum_accessors(self, t):
         print("--> gen_enum_accessors %s" % self.field.name)

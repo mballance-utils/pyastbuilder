@@ -79,6 +79,7 @@ class CppGenFactory(object):
         pass
     
     def gen_ih_prelude(self, out):
+        out.println("#include <memory>")
         for e in self.ast.enums:
             out.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%e.name))
         for c in self.ast.classes:
@@ -86,6 +87,8 @@ class CppGenFactory(object):
             
         CppGenNS.enter(self.namespace, out)
         
+        out.println("class IFactory;")
+        out.println("using IFactoryUP=std::unique_ptr<IFactory>;")
         out.println("class IFactory {")
         out.println("public:")
         out.println()

@@ -168,10 +168,10 @@ class CppGenFactory(object):
         out_cpp.println("std::unique_ptr<Factory> Factory::m_inst;")
         out_cpp.println()
         if self.namespace is not None:
-            out_cpp.println("extern \"C\" %s::IFactory *get_%s_Factory() {" % (
+            out_cpp.println("extern \"C\" %s::IFactory *%s_getFactory() {" % (
                 self.namespace, self.name))
         else:
-            out_cpp.println("extern \"C\" IFactory *get_%s_Factory() {" % (self.name,))
+            out_cpp.println("extern \"C\" IFactory *%s_getFactory() {" % (self.name,))
         out_cpp.inc_indent()
         out_cpp.println("return Factory::inst();")
         out_cpp.dec_indent()

@@ -56,6 +56,10 @@ class Linker(Visitor):
     def visitAstClass(self, c):
         self.active_class = c
         Visitor.visitAstClass(self, c)
+
+    def visitAstStruct(self, s):
+        self.active_class = s
+        Visitor.visitAstStruct(self, s)
         
     def visitTypeUserDef(self, t):
         if not t.name in self.active_class.deps.keys():

@@ -86,6 +86,23 @@ class PyExtGenPyx(Visitor):
             self.decl_pxd.dec_indent()                
             self.pyx.dec_indent()
 
+        for e in ast.structs:
+            if self.namespace is not None:
+                self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
+                    CppGenNS.incpath(self.namespace, "%s.h"%e.name), self.namespace))
+            else:
+                self.decl_pxd.println("cdef extern from \"%s.h\":" % e.name)
+            self.decl_pxd.inc_indent()
+            self.decl_pxd.println("cdef cppclass %s:" % e.name)
+            self.decl_pxd.inc_indent()
+            for d in e.data:
+                self.decl_pxd.println(
+                    PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(d.t) + " %s" % d.name)
+            self.decl_pxd.dec_indent()
+            self.decl_pxd.dec_indent()
+
+            pass
+
         for e in ast.flags:
             if self.namespace is not None:
                 self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (

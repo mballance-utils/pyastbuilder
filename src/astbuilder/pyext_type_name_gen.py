@@ -6,6 +6,7 @@ from .type_pointer import TypePointer
 from .visitor import Visitor
 from astbuilder.ast_enum import AstEnum
 from astbuilder.ast_flags import AstFlags
+from astbuilder.ast_struct import AstStruct
 
 
 class PyExtTypeNameGen(Visitor):
@@ -174,6 +175,15 @@ class PyExtTypeNameGen(Visitor):
 
         if isinstance(t.target, (AstEnum,AstFlags)):
             t.target.accept(self)
+        elif isinstance(t.target, (AstStruct,)):
+            if self.is_pydecl and self.is_pytype:
+                self.out += "%s" % t.name
+            elif not self.is_pydecl and self.is_pytype:
+                self.out += "%s" % t.name
+            elif self.is_pydecl and not self.is_pytype:
+                self.out += "%s.%s" % (self.ns, t.name)
+            elif not self.is_pydecl and not self.is_pytype:
+                self.out += "%s" % t.name
         else:
             if self.is_const:
                self.out += "const "

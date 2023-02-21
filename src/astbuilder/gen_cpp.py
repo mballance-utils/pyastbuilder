@@ -369,6 +369,12 @@ class GenCPP(Visitor):
         # Assign fields that are non-parameter and have defaults            
         out_cpp.inc_indent()
         for d in filter(lambda d:d.init is not None, c.data):
+            if d.init == "False":
+                d.init = "false"
+            if d.init == "True":
+                d.init = "true"
+
+            print("Initial: %s %s %s" % (d.name, str(d.init), str(type(d.init))))
             out_cpp.println("m_" + d.name + " = " + d.init + ";")
         out_cpp.dec_indent()
             
@@ -701,6 +707,11 @@ class GenCPP(Visitor):
         h.println("#include <vector>")
         h.println()
 
+        for key,d in s.deps.items():
+            if isinstance(d.target, (AstEnum,AstFlags,AstStruct)):
+                h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "%s.h"%key))
+        h.println()
+
         CppGenNS.enter(self.namespace, h)
 
         h.println()
@@ -708,10 +719,15 @@ class GenCPP(Visitor):
         h.inc_indent()
         for f in s.data:
             if f.init is not None:
+                if type(f.init) is not bool:
+                    val = str(f.init)
+                else:
+                    val = "true" if f.init else "false"
+
                 h.println("%s %s = %s;" % (
                     CppTypeNameGen(True).gen(f.t),
                     f.name,
-                    f.init))
+                    val))
             else:
                 h.println(CppTypeNameGen(True).gen(f.t) + " " + f.name + ";")
         h.dec_indent()

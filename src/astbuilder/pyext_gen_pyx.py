@@ -48,6 +48,10 @@ class PyExtGenPyx(Visitor):
         self.gen_defs(self.pxd)
 #        self.gen_defs(self.pyx)
 
+        self.pyx.println("import ctypes")
+        self.pyx.println("import os")
+        self.pyx.println("from libc.stdint cimport intptr_t")
+
         pkg_elems = self.target_pkg.split(".")
         if len(pkg_elems) > 1:
             self.pxd.println("from %s cimport %s_decl" % (pkg_elems[0], pkg_elems[1]))
@@ -162,6 +166,7 @@ class PyExtGenPyx(Visitor):
         
 
     def gen_factory_decl(self):
+        self.decl_pxd.println("ctypedef IFactory *IFactoryP")
         if self.namespace is not None:
             self.decl_pxd.println("cdef extern from \"%s\" namespace \"%s\":" % (
                 CppGenNS.incpath(self.namespace, "IFactory.h"), self.namespace))
@@ -187,6 +192,7 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.dec_indent()
         
     def gen_factory(self):
+        self.pyx.println("cdef Factory _inst = None")
         self.pxd.println("cdef class Factory(object):")
         self.pyx.println("cdef class Factory(object):")
         self.pxd.inc_indent()
@@ -223,6 +229,33 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("ret = Factory()")
         self.pyx.println("ret._hndl = hndl")
         self.pyx.println("return ret")
+        self.pyx.dec_indent()
+
+        self.pyx.println("@staticmethod")
+        self.pyx.println("def inst():")
+        self.pyx.inc_indent()
+        self.pyx.println("cdef Factory factory")
+        self.pyx.println("global _inst")
+        self.pyx.println("if _inst is None:")
+        self.pyx.inc_indent()
+        self.pyx.println("ext_dir = os.path.dirname(os.path.abspath(__file__))")
+        self.pyx.println("core_lib = os.path.join(ext_dir, \"lib%s.so\")" % self.name)
+        self.pyx.println("if not os.path.isfile(core_lib):")
+        self.pyx.inc_indent()
+        self.pyx.println("raise Exception(\"Extension library core \\\"%s\\\" doesn't exist\" % core_lib)")
+        self.pyx.dec_indent()
+        self.pyx.println("so = ctypes.cdll.LoadLibrary(core_lib)")
+        self.pyx.println("func = so.%s_getFactory" % self.name)
+        self.pyx.println("func.restype = ctypes.c_void_p")
+        self.pyx.println("")
+        self.pyx.println("hndl = <%s_decl.IFactoryP>(<intptr_t>(func()))" % self.name)
+        self.pyx.println("factory = Factory()")
+        self.pyx.println("factory._hndl = hndl")
+#        self.pyx.println("factory.init(dm_core.Factory.init())")
+        self.pyx.println("_inst = factory")
+        self.pyx.dec_indent()
+
+        self.pyx.println("return _inst")
         self.pyx.dec_indent()
         
         self.pxd.dec_indent()

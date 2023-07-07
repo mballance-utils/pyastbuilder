@@ -48,6 +48,8 @@ class GenCPP(Visitor):
         # Collect the set of enumerated-type names
         for e in ast.enums:
             self.enum_t.add(e.name)
+
+        self.generateUP()
             
         CppGenFactory(
             self.outdir,
@@ -63,6 +65,53 @@ class GenCPP(Visitor):
         
         with open(os.path.join(self.outdir, "CMakeLists.txt"), "w") as f:
             f.write(self.gen_cmake(ast))
+
+    def generateUP(self):
+        incdir = CppGenNS.incdir(self.outdir, self.namespace)            
+        impldir = os.path.join(incdir, "impl")
+
+        if not os.path.isdir(impldir):
+            os.makedirs(impldir)
+        
+        out = OutStream()
+        out.println("/****************************************************************************")
+        out.println(" * UP.h")
+        if self.license is not None:
+            out.write(self.license)
+        out.println(" ****************************************************************************/")
+        out.println("#pragma once")
+        out.println()
+        CppGenNS.enter(self.namespace, out)
+        out.println("template <class T> struct UPD {")
+        out.inc_indent()
+        out.println("UPD() : m_owned(true) { }")
+        out.println("UPD(bool &owned) : m_owned(owned) { }")
+        out.println("void operator()(T *p) {")
+        out.inc_indent()
+        out.println("if (p && m_owned) {")
+        out.inc_indent()
+        out.println("delete p;")
+        out.dec_indent()
+        out.println("}")
+        out.dec_indent()
+        out.println("}")
+        out.println("bool m_owned;")
+        out.dec_indent()
+        out.println("};")
+        out.println()
+        out.println("template <class T> class UP : public std::unique_ptr<T,UPD<T>> {")
+        out.println("public:")
+        out.inc_indent()
+        out.println("UP() : std::unique_ptr<T,UPD<T>>() {}")
+        out.println("UP(T *p, bool owned=true) : std::unique_ptr<T,UPD<T>>(p, UPD<T>(owned)) {}")
+        out.println("bool owned() const { return std::unique_ptr<T,UPD<T>>::get_deleter().m_owned; }")
+        out.dec_indent()
+        out.println("};");
+        CppGenNS.leave(self.namespace, out)
+
+        with open(os.path.join(impldir, "UP.h"), "w") as fp:
+            fp.write(out.content())
+        pass
     
     def visitAstClass(self, c : AstClass):
         h = OutStream()
@@ -226,6 +275,7 @@ class GenCPP(Visitor):
         out_inc_h.println("#include <string>")
         out_h.println("#include <vector>")
         out_inc_h.println("#include <vector>")
+        out_inc_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "impl/UP.h"))
         out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IVisitor.h"))
         out_inc_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IVisitor.h"))
         out_h.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "I%s.h" % c.name))
@@ -253,8 +303,10 @@ class GenCPP(Visitor):
             if isinstance(d.target, AstClass):
                 out_cls.println("class I" + key + ";")
                 out_icls.println("class I" + key + ";")
-                out_cls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
-                out_icls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
+#                out_cls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
+                out_cls.println("using I%sUP=UP<I%s>;" % (key, key))
+#                out_icls.println("typedef std::unique_ptr<I" + key + "> I" + key + "UP;")
+                out_icls.println("using I%sUP=UP<I%s>;" % (key, key))
                 out_cls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
                 out_icls.println("typedef std::shared_ptr<I" + key + "> I" + key + "SP;")
             elif isinstance(d.target, (AstEnum,AstStruct,AstFlags)):
@@ -264,10 +316,11 @@ class GenCPP(Visitor):
 
         out_cls.println("class " + c.name + ";")
         out_icls.println("class I" + c.name + ";")
-        out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
-        out_icls.println("typedef std::unique_ptr<I" + c.name + "> I" + c.name + "UP;")
-        out_cls.println("typedef std::shared_ptr<" + c.name + "> " + c.name + "SP;")
-        out_icls.println("typedef std::shared_ptr<I" + c.name + "> I" + c.name + "SP;")
+        out_icls.write("using I%sUP=UP<I%s>;" % (c.name, c.name))
+#        out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
+#        out_icls.println("typedef std::unique_ptr<I" + c.name + "> I" + c.name + "UP;")
+#        out_cls.println("typedef std::shared_ptr<" + c.name + "> " + c.name + "SP;")
+#        out_icls.println("typedef std::shared_ptr<I" + c.name + "> I" + c.name + "SP;")
         out_cls.println()
         out_icls.println()
         out_cls.println("#ifdef _WIN32")
@@ -275,10 +328,9 @@ class GenCPP(Visitor):
         out_cls.println("__declspec(dllexport)")
         out_cls.println("#endif")
         out_cls.println("#endif /* _WIN32 */")
-        out_cls.write("class " + c.name)
-        out_icls.write("class I" + c.name)
+        out_icls.write("class I%s" % c.name)
 
-        out_cls.write(" : public virtual I%s" % c.name)        
+        out_cls.write("class %s : public virtual I%s" % (c.name, c.name))
         if c.super is not None:
             out_cls.write(", public %s" % c.super.name)
             out_icls.write(" : public virtual I%s" % c.super.name)
@@ -455,7 +507,7 @@ class GenCPP(Visitor):
         for key,d in c.deps.items():
             if isinstance(d.target, AstClass):
                 out_cls.println("class " + key + ";")
-                out_cls.println("typedef std::unique_ptr<" + key + "> " + key + "UP;")
+                out_cls.println("using %sUP=UP<%s>;" % (key, key))
                 out_cls.println("typedef std::shared_ptr<" + key + "> " + key + "SP;")
             elif isinstance(d.target, (AstEnum,AstFlags)):
                 out_h.println("#include \"" + key + ".h\"")
@@ -467,7 +519,7 @@ class GenCPP(Visitor):
 #                raise Exception("TODO: handle circular dependency on " + key)
 
         out_cls.println("class " + c.name + ";")
-        out_cls.println("typedef std::unique_ptr<" + c.name + "> " + c.name + "UP;")
+        out_cls.println("using %sUP=UP<%s>;" % (c.name, c.name))
         out_cls.println("typedef std::shared_ptr<" + c.name + "> " + c.name + "SP;")
         out_cls.println()
         out_cls.println("#ifdef _WIN32")
@@ -804,6 +856,7 @@ class GenCPP(Visitor):
         out.println()
         
         return out.content()
+
         
     
 class FieldForwardRefGen(Visitor):

@@ -226,15 +226,15 @@ class CppAccessorGen(Visitor):
         
         # Generate a setter
         self.out_h.println("virtual void set" + name + "(" +
-            CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) override;")
+            CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v, bool own=true) override;")
         self.out_ih.println("virtual void set" + name + "(" +
-            CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) = 0;")
+            CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v, bool own=true) = 0;")
 
         self.out_cpp.println("void " + self.clsname + "::set" + name + 
-                "(" + CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v) {")
+                "(" + CppTypeNameGen(compressed=True,is_const=False,is_ptr=True).gen(t.t) + "v, bool own) {")
         self.out_cpp.inc_indent()
         self.out_cpp.println("m_" + self.field.name + " = " + 
-            CppTypeNameGen(compressed=True).gen(t) + "(v);")
+            CppTypeNameGen(compressed=True).gen(t) + "(v, own);")
         self.out_cpp.dec_indent()
         self.out_cpp.println("}")
 

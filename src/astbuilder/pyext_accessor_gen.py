@@ -200,23 +200,38 @@ class PyExtAccessorGen(Visitor):
         # Generate a read-only accessor
         self.decl_pxd.println(
             PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=True,is_const=True).gen(t) + 
-            "get" + name + "()")
+            "get%s()" % name)
         self.decl_pxd.println()
 
         self.pxd.println("cpdef %s get%s(self)" % (
-            PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(t),
+            "str",
+#            PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(t),
             name))
         self.pyx.println("cpdef %s get%s(self):" % (
-            PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(t),
+            "str",
+#            PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(t),
             name))
         self.pyx.inc_indent()
-        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get%s()" %
+        self.pyx.println("return dynamic_cast[%s_decl.I%sP](self._hndl).get%s().decode()" %
                          (self.name, self.clsname, name))
         self.pyx.dec_indent()
 
         # Generate a setter
-        self.decl_pxd.println("void set_" + self.field.name + "(" +
-            PyExtTypeNameGen(ns=self.name,compressed=True,is_const=True,is_ref=True).gen(t) + "v)")
+        self.decl_pxd.println("void set%s(%sv)" % (
+            name,
+            PyExtTypeNameGen(ns=self.name,compressed=True,is_const=True,is_ref=True).gen(t)
+        ))
+
+        self.pxd.println("cpdef void set%s(self, %s v)" % (
+            name,
+            "str"))
+        self.pyx.println("cpdef void set%s(self, %s v):" % (
+            name,
+            "str"))
+        self.pyx.inc_indent()
+        self.pyx.println("dynamic_cast[%s_decl.I%sP](self._hndl).set%s(v.encode())" % (
+                self.name, self.clsname, name))
+        self.pyx.dec_indent()
 
     def const_ref_ret(self, t, is_pydecl=False, is_pytype=False):
         return PyExtTypeNameGen(ns=self.name,compressed=True,is_pydecl=is_pydecl,

@@ -170,6 +170,13 @@ class PyExtTypeNameGen(Visitor):
         if self.is_ref:
             self.out += " &"
     
+    def visitAstStruct(self, s : AstStruct):
+        if self.is_const:
+            self.out += "const "
+        self.out += s.name
+        if self.is_ref:
+            self.out += " &"
+
     def visitTypeUserDef(self, t):
         print("PyExtTyeNameGen: TypeUserDef")
 

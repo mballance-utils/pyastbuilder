@@ -102,6 +102,8 @@ class PyExtGenPyx(Visitor):
             for d in e.data:
                 self.decl_pxd.println(
                     PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=False,is_const=False).gen(d.t) + " %s" % d.name)
+            if len(e.data) == 0:
+                self.decl_pxd.println("pass")
             self.decl_pxd.dec_indent()
             self.decl_pxd.dec_indent()
 
@@ -375,10 +377,10 @@ class PyExtGenPyx(Visitor):
 #         self.pyx.dec_indent()
 #         self.pyx.println()
 
-        if len(c.data) > 0:
-            for d in c.data:
-                PyExtAccessorGen(self.name, c.name, self.decl_pxd, self.pxd, self.pyx).gen(d)
-        else:
+        for d in c.data:
+            PyExtAccessorGen(self.name, c.name, self.decl_pxd, self.pxd, self.pyx).gen(d)
+
+        if len(c.data) == 0:
             self.decl_pxd.println("pass")
             
         if c.super is None:

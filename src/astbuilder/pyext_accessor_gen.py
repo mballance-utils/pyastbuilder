@@ -36,6 +36,13 @@ class PyExtAccessorGen(Visitor):
                 is_pytype=False,
                 is_ref=False,
                 is_const=False)
+        self.decl_pxd_cref_tgen = PyExtTypeNameGen(
+                ns=self.name,
+                compressed=True,
+                is_pydecl=False,
+                is_pytype=False,
+                is_ref=True,
+                is_const=True)
         
     def gen(self, field):
         self.field = field
@@ -61,7 +68,7 @@ class PyExtAccessorGen(Visitor):
         self.gen_class_accessors(c)
 
     def visitAstStruct(self, s):
-        print("TODO: gen struct accessor")
+        self.gen_struct_accessors(s)
 
     def visitAstEnum(self, e : AstEnum):
         self.gen_enum_accessors(e)
@@ -103,6 +110,18 @@ class PyExtAccessorGen(Visitor):
         print("TODO: class accessor")
         pass
 
+    def gen_struct_accessors(self, s):
+        # Generate a read-only accessor
+        name = self.field.name[0].upper() + self.field.name[1:]
+        self.decl_pxd.println("%s get%s()" % (
+            self.decl_pxd_cref_tgen.gen(s),
+            name))
+        self.decl_pxd.println()
+
+        # Generate a setter
+        self.decl_pxd.println("void set%s(%s)" % (
+            name,
+            self.decl_pxd_cref_tgen.gen(s)))
 
     def gen_enum_accessors(self, t):
         print("--> gen_enum_accessors %s" % self.field.name)

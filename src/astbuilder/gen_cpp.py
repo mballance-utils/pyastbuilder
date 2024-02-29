@@ -847,7 +847,7 @@ class GenCPP(Visitor):
         out.dec_indent()
         out.println()
         incdir = CppGenNS.incdir("${CMAKE_CURRENT_SOURCE_DIR}", self.namespace)
-        out.println("install(DIRECTORY \"%s\"" % os.path.dirname(incdir))
+        out.println("install(DIRECTORY \"%s\"" % os.path.dirname(incdir).replace("\\", "/"))
         out.inc_indent()
         out.println("DESTINATION \"include\"")
         out.println("COMPONENT dev")

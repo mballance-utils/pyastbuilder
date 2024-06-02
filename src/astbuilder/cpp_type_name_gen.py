@@ -51,7 +51,7 @@ class CppTypeNameGen(Visitor):
             if self.is_const:
                 self.out += "const "
             
-            self.out += "std::map<"
+            self.out += "std::unordered_map<"
             self.out += CppTypeNameGen(compressed=self.compressed).gen(t.kt)
             self.out += ","
             self.out += CppTypeNameGen(compressed=self.compressed).gen(t.vt)

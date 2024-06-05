@@ -122,7 +122,7 @@ class PyExtTypeNameGen(Visitor):
                     if t.pt == PointerKind.Shared:
                         self.out += "shared_ptr["
                     elif t.pt == PointerKind.Unique and not self.is_ret:
-                        self.out += "unique_ptr["
+                        self.out += "UP["
                 Visitor.visitTypePointer(self, t)
         
                 if t.pt == PointerKind.Shared or t.pt == PointerKind.Unique:

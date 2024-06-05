@@ -9,7 +9,7 @@ from astbuilder.cpp_gen_ns import CppGenNS
 from astbuilder.visitor import Visitor
 
 
-class PyExtGenVisitor(Visitor):
+class PyExtGenFactory(Visitor):
     
     def __init__(self,
                  name,
@@ -40,13 +40,13 @@ class PyExtGenVisitor(Visitor):
         #
         # Generate a cdef class in pyx with just 
         
-        self.gen_visitor_imp(ast)
-        self.gen_visitor(ast)
-        self.gen_py_base_visitor(ast)
+#        self.gen_factory_imp(ast)
+        self.gen_factory(ast)
+#        self.gen_py_base_factory(ast)
         
         pass
     
-    def gen_visitor_imp(self, ast):
+    def gen_factory_imp(self, ast):
         """Generate the decl_pxd view of the base visitor"""
 
         # Define the AST VisitorBase class
@@ -73,34 +73,49 @@ class PyExtGenVisitor(Visitor):
         self.decl_pxd.println("cpdef cppclass %s(%s):" % ("PyBaseVisitor", "VisitorBase"))
         self.decl_pxd.inc_indent()
         self.decl_pxd.println("PyBaseVisitor(cpy_ref.PyObject *)")
-
-        for c in ast.rootClasses():
-            # Python-callable visitor method to traverse through the base type
-            self.decl_pxd.println("void py_accept%s(I%s *i);" % (c.name, c.name))
-
         for c in ast.classes:
-            self.decl_pxd.println("void py_visit%sBase(I%s *i)" % (c.name, c.name))
+            self.decl_pxd.println("void py_visit%s(I%s *i)" % (c.name, c.name))
         self.decl_pxd.dec_indent()
         self.decl_pxd.dec_indent()
         
-    def gen_visitor(self, ast):
+    def gen_factory(self, ast):
         """Generates cdef class that user can extend"""
         
-        self.pxd.println("cdef class VisitorBase(object):")
+        self.pxd.println("cdef class ObjFactory(VisitorBase):")
         self.pxd.inc_indent()
         
-        self.pyx.println("cdef class VisitorBase(object):")
+        self.pyx.println("cdef class ObjFactory(VisitorBase):")
         self.pyx.inc_indent()
         
-        self.pxd.println("cdef %s_decl.PyBaseVisitor *_hndl" % self.name)
-        self.pxd.println("cdef bool                  _owned")
-        
-        self.pyx.println("def __cinit__(self):")
+        self.pyx.println("def __init__(self):")
         self.pyx.inc_indent()
-        self.pyx.println("self._hndl = new %s_decl.PyBaseVisitor(<cpy_ref.PyObject*>self)" %
-                         (self.name,))
+        self.pyx.println("super().__init__()")
+        self.pyx.println("self._obj = None")
+        self.pyx.println("self._owned = False")
         self.pyx.dec_indent()
 
+        self.pyx.println("def mk(self, obj, owned):")
+        self.pyx.inc_indent()
+        self.pyx.println("self._obj = None")
+        self.pyx.println("self._owned = owned")
+        for i,c in enumerate(ast.rootClasses()):
+            if i == 0:
+                self.pyx.println("if isinstance(obj, %s):" % c.name)
+            else:
+                self.pyx.println("elif isinstance(obj, %s):" % c.name)
+            self.pyx.inc_indent()
+            self.pyx.println("self._hndl.py_accept%s((<%s>obj)._hndl)" % (c.name, c.name))
+            self.pyx.dec_indent()
+            
+        self.pyx.println("else:")
+        self.pyx.inc_indent()
+        self.pyx.println("#ralse Exception('Failed to find appropriate root file')")
+        self.pyx.println("pass")
+        self.pyx.dec_indent()
+        self.pyx.println("return self._obj")
+
+
+        self.pyx.dec_indent()
 
         
         for c in ast.classes:
@@ -108,8 +123,7 @@ class PyExtGenVisitor(Visitor):
             
             self.pyx.println("cpdef void visit%s(self, %s i):" % (c.name, c.name))
             self.pyx.inc_indent()
-            self.pyx.println("self._hndl.py_visit%sBase(dynamic_cast[%s_decl.I%sP](i._hndl));" % 
-                             (c.name, self.name, c.name))
+            self.pyx.println("self._obj = i")
             self.pyx.dec_indent()
         self.pyx.dec_indent()
         self.pxd.dec_indent()
@@ -161,17 +175,6 @@ class PyExtGenVisitor(Visitor):
         self.decl_pxd.inc_indent()
         self.hpp.println("public:")
         self.decl_pxd.inc_indent()
-
-        # First, create entrypoints for root types
-        for c in ast.rootClasses():
-            # Python-callable visitor method to traverse through the base type
-            self.hpp.println("void py_accept%s(I%s *i);" % (c.name, c.name))
-            self.cpp.println("void PyBaseVisitor::py_accept%s(I%s *i) {" % (c.name, c.name))
-            self.cpp.inc_indent()
-            self.cpp.println("i->accept(this);")
-            self.cpp.dec_indent()
-            self.cpp.println("}")
-
         for c in ast.classes:
 
             # C++-callable visitor method            
@@ -182,14 +185,13 @@ class PyExtGenVisitor(Visitor):
             self.cpp.dec_indent()
             self.cpp.println("}")
 
-            # Python-callable visitor method to traverse through the base type
-            self.hpp.println("void py_visit%sBase(I%s *i);" % (c.name, c.name))
-            self.cpp.println("void PyBaseVisitor::py_visit%sBase(I%s *i) {" % (c.name, c.name))
+            # Python-callable visitor method            
+            self.hpp.println("void py_visit%s(I%s *i);" % (c.name, c.name))
+            self.cpp.println("void PyBaseVisitor::py_visit%s(I%s *i) {" % (c.name, c.name))
             self.cpp.inc_indent()
             self.cpp.println("VisitorBase::visit%s(i);" % c.name)
             self.cpp.dec_indent()
             self.cpp.println("}")
-
             
             self.pyx.println("cdef public api %s_call_visit%s(object self, %s_decl.I%s *i) with gil:" % 
                              (self.name, c.name, self.name, c.name))

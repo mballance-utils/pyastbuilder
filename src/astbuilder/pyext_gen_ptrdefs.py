@@ -16,3 +16,4 @@ class PyExtGenPtrDef(Visitor):
         
     def visitAstClass(self, c : AstClass):
         self.decl_pxd.println("ctypedef I%s *I%sP" % (c.name, c.name))
+        self.decl_pxd.println("ctypedef UP[I%s] I%sUP" % (c.name, c.name))

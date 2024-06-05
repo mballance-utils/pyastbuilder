@@ -44,5 +44,12 @@ class Ast(object):
         
     def accept(self, v):
         v.visitAst(self)
+
+    def rootClasses(self):
+        ret = []
+        for c in self.classes:
+            if c.super is None:
+                ret.append(c)
+        return ret
         
     

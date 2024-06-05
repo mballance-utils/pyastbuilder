@@ -4,6 +4,7 @@ from astbuilder.type_scalar import TypeKind
 from astbuilder.visitor import Visitor
 from .ast_enum import AstEnum
 from .ast_flags import AstFlags
+from .py_ext_list_accessor_gen import PyExtListAccessorGen
 
 
 class PyExtAccessorGen(Visitor):
@@ -43,13 +44,22 @@ class PyExtAccessorGen(Visitor):
                 is_pytype=False,
                 is_ref=True,
                 is_const=True)
+        self.list_accessor_gen = PyExtListAccessorGen(
+            name, clsname, decl_pxd, pxd, pyx)
         
     def gen(self, field):
         self.field = field
         self.field.t.accept(self)
 
     def visitTypeList(self, t):
-        self.gen_collection_accessors(t)
+        self.list_accessor_gen.gen(self.field, t)
+
+        name = self.field.name[0].upper() + self.field.name[1:]
+        self.decl_pxd.println(self.nonconst_ref_ret(
+            t, 
+            is_pydecl=False,
+            is_pytype=False) + "get" + name + "();")
+        
     
     def visitTypeMap(self, t):
         self.gen_collection_accessors(t)
@@ -95,11 +105,8 @@ class PyExtAccessorGen(Visitor):
 #        self.decl_pxd.println()
 
         # Generate a non-const accessor
-        self.decl_pxd.println(self.nonconst_ref_ret(
-            t, 
-            is_pydecl=False,
-            is_pytype=False) + "get" + name + "();")
-        
+
+
 #         self.pyx.println("cdef %s get_%s():" % (self.nonconst_ref_ret(t), self.field.name))
 #         self.pyx.inc_indent()
 #         self.pyx.println("return (<%s_decl.%s *>self._hndl).get_%s()" %

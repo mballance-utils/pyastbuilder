@@ -13,6 +13,7 @@ from astbuilder.pyext_accessor_gen import PyExtAccessorGen
 import os
 from astbuilder.pyext_gen_extdef import PyExtGenExtDef
 from astbuilder.pyext_gen_pyx import PyExtGenPyx
+from astbuilder.pyext_gen_factory import PyExtGenFactory
 from astbuilder.pyext_gen_visitor import PyExtGenVisitor
 
 
@@ -45,8 +46,20 @@ class PyExtGen(Visitor):
             decl_pxd,
             pxd,
             pyx).gen(ast)
-            
+
+        pyx.println()
+
         PyExtGenVisitor(
+            self.name,
+            self.namespace,
+            self.target_pkg,
+            decl_pxd,
+            pxd,
+            pyx,
+            cpp,
+            hpp).gen(ast)
+        
+        PyExtGenFactory(
             self.name,
             self.namespace,
             self.target_pkg,

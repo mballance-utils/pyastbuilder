@@ -156,6 +156,18 @@ class PyExtGenPyx(Visitor):
         out.println("cimport cpython.ref as cpy_ref")
         out.println()
 
+        out.println("cdef extern from \"zsp/ast/impl/UP.h\" namespace \"zsp::ast\":")
+        out.inc_indent()
+        out.println("cpdef cppclass UP[T](unique_ptr[T]):")
+        out.inc_indent()
+        out.println("UP()")
+        out.println("UP(T *, bool)")
+        out.println("T *get()")
+        out.dec_indent()
+        out.dec_indent()
+              
+        out.println()
+
         out.println("ctypedef char                 int8_t")
         out.println("ctypedef unsigned char        uint8_t")
         out.println("ctypedef short                int16_t")

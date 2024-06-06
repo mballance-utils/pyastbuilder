@@ -18,6 +18,7 @@ class PyExtGenVisitor(Visitor):
                  decl_pxd,
                  pxd,
                  pyx,
+                 pyi,
                  cpp,
                  hpp):
         self.name = name
@@ -26,6 +27,7 @@ class PyExtGenVisitor(Visitor):
         self.decl_pxd = decl_pxd
         self.pxd = pxd
         self.pyx = pyx
+        self.pyi = pyi
         self.cpp = cpp
         self.hpp = hpp
 
@@ -41,7 +43,8 @@ class PyExtGenVisitor(Visitor):
         # Generate a cdef class in pyx with just 
         
         self.gen_visitor_imp(ast)
-        self.gen_visitor(ast)
+        self.gen_base_visitor(ast)
+#        self.gen_user_visitor(ast)
         self.gen_py_base_visitor(ast)
         
         pass
@@ -83,8 +86,8 @@ class PyExtGenVisitor(Visitor):
         self.decl_pxd.dec_indent()
         self.decl_pxd.dec_indent()
         
-    def gen_visitor(self, ast):
-        """Generates cdef class that user can extend"""
+    def gen_base_visitor(self, ast):
+        """Generates cdef class"""
         
         self.pxd.println("cdef class VisitorBase(object):")
         self.pxd.inc_indent()
@@ -113,7 +116,26 @@ class PyExtGenVisitor(Visitor):
             self.pyx.dec_indent()
         self.pyx.dec_indent()
         self.pxd.dec_indent()
+
+    def gen_user_visitor(self, ast):
+        """Generates Python class that user can extend"""
         
+        self.pyx.println("cdef class Visitor(VisitorBase):")
+        self.pyx.inc_indent()
+        
+#        self.pyx.println("def __init__(self):")
+#        self.pyx.inc_indent()
+#        self.pyx.println("pass")
+#        self.pyx.dec_indent()
+
+        for c in ast.classes:
+            self.pyx.println("def visit%s(self, i : %s):" % (c.name, c.name))
+            self.pyx.inc_indent()
+            self.pyx.println("super().visit%s(i)" % c.name)
+            self.pyx.dec_indent()
+
+        self.pyx.dec_indent()
+
     def gen_py_base_visitor(self, ast):
         self.hpp.println("#pragma once")
 

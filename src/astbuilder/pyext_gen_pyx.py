@@ -27,7 +27,8 @@ class PyExtGenPyx(Visitor):
                  target_pkg,
                  decl_pxd,
                  pxd,
-                 pyx):
+                 pyx,
+                 pyi):
         self.outdir = outdir
         self.name = name
         self.namespace = namespace
@@ -35,6 +36,7 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd = decl_pxd
         self.pxd = pxd
         self.pyx = pyx
+        self.pyi = pyi
         
     def gen(self, ast):
         self.ast = ast

@@ -35,6 +35,7 @@ class PyExtGen(Visitor):
         decl_pxd = OutStream()
         pxd = OutStream()
         pyx = OutStream()
+        pyi = OutStream()
         cpp = OutStream()
         hpp = OutStream()
         
@@ -45,7 +46,8 @@ class PyExtGen(Visitor):
             self.target_pkg,
             decl_pxd,
             pxd,
-            pyx).gen(ast)
+            pyx,
+            pyi).gen(ast)
 
         pyx.println()
 
@@ -56,6 +58,7 @@ class PyExtGen(Visitor):
             decl_pxd,
             pxd,
             pyx,
+            pyi,
             cpp,
             hpp).gen(ast)
         
@@ -66,6 +69,7 @@ class PyExtGen(Visitor):
             decl_pxd,
             pxd,
             pyx,
+            pyi,
             cpp,
             hpp).gen(ast)
             
@@ -83,6 +87,9 @@ class PyExtGen(Visitor):
             
         with open(os.path.join(self.outdir, "%s.pyx" % self.name), "w") as f:
             f.write(pyx.content())
+
+        with open(os.path.join(self.outdir, "%s.pyi" % self.name), "w") as f:
+            f.write(pyi.content())
    
         with open(os.path.join(self.outdir, "PyBaseVisitor.h"), "w") as f:
             f.write(hpp.content())

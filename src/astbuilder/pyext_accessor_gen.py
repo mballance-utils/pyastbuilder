@@ -4,7 +4,7 @@ from astbuilder.type_scalar import TypeKind
 from astbuilder.visitor import Visitor
 from .ast_enum import AstEnum
 from .ast_flags import AstFlags
-from .py_ext_list_accessor_gen import PyExtListAccessorGen
+from .pyext_list_accessor_gen import PyExtListAccessorGen
 
 
 class PyExtAccessorGen(Visitor):
@@ -58,13 +58,32 @@ class PyExtAccessorGen(Visitor):
         self.decl_pxd.println(self.nonconst_ref_ret(
             t, 
             is_pydecl=False,
-            is_pytype=False) + "get" + name + "();")
+            is_pytype=False) + " get" + name + "();")
         
     
     def visitTypeMap(self, t):
         self.gen_collection_accessors(t)
         
     def visitTypePointer(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        tname = t.t.name
+
+        self.pxd.println("cpdef %s get%s(self)" % (tname, name))
+        
+        self.pyx.println("cpdef %s get%s(self):" % (tname, name))
+        self.pyx.inc_indent()
+        self.pyx.println("if self.as%s().get%s() == NULL:" % (self.clsname, name))
+        self.pyx.inc_indent()
+        self.pyx.println("return None")
+        self.pyx.dec_indent()
+        self.pyx.println("else:")
+        self.pyx.inc_indent()
+        self.pyx.println("of = ObjFactory()")
+        self.pyx.println("self.as%s().get%s().accept(of._hndl)" % (self.clsname, name))
+        self.pyx.println("return <%s>(of._obj)" % tname)
+        self.pyx.dec_indent()
+        self.pyx.dec_indent()
+
         if t.pt == PointerKind.Raw:
             self.gen_rawptr_accessors(t)
         elif t.pt == PointerKind.Unique:
@@ -190,23 +209,23 @@ class PyExtAccessorGen(Visitor):
         # Generate a read-only accessor
         name = self.field.name[0].upper() + self.field.name[1:]
         self.decl_pxd.println(self.decl_pxd_ptr_tgen.gen(t) + 
-            "get" + name + "();")
+            " get" + name + "();")
         self.decl_pxd.println()
 
         # Generate a setter
         self.decl_pxd.println("void set" + name + "(" +
-            self.decl_pxd_ptr_tgen.gen(t) + "v)")
+            self.decl_pxd_ptr_tgen.gen(t) + " v)")
 
     def gen_uptr_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
         
         # Generate a read-only accessor
         self.decl_pxd.println(self.decl_pxd_ptr_tgen.gen(t.t) + 
-            "get" + name + "()")
+            " *get" + name + "()")
         self.decl_pxd.println()
 
         # Generate a setter
-        self.decl_pxd.println("void set" + name + "(" + self.decl_pxd_ptr_tgen.gen(t.t) + "v)")
+        self.decl_pxd.println("void set" + name + "(" + self.decl_pxd_ptr_tgen.gen(t.t) + " *v)")
 
     def gen_sptr_accessors(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
@@ -243,7 +262,7 @@ class PyExtAccessorGen(Visitor):
         self.pyx.dec_indent()
 
         # Generate a setter
-        self.decl_pxd.println("void set%s(%sv)" % (
+        self.decl_pxd.println("void set%s(%s v)" % (
             name,
             PyExtTypeNameGen(ns=self.name,compressed=True,is_const=True,is_ref=True).gen(t)
         ))

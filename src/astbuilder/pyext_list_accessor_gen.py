@@ -151,9 +151,9 @@ class PyExtListAccessorGen(Visitor):
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
         self.pyx.println("of = ObjFactory()")
-        self.pyx.println("ret = __ep.accept(of._hndl)")
+        self.pyx.println("__ep.accept(of._hndl)")
 
-        self.pyx.println("return ret")
+        self.pyx.println("return of._obj")
         self.pyx.dec_indent()
 
     def _getSize(self, t):

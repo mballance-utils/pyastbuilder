@@ -18,6 +18,7 @@ class PyExtGenFactory(Visitor):
                  decl_pxd,
                  pxd,
                  pyx,
+                 pyi,
                  cpp,
                  hpp):
         self.name = name
@@ -26,6 +27,7 @@ class PyExtGenFactory(Visitor):
         self.decl_pxd = decl_pxd
         self.pxd = pxd
         self.pyx = pyx
+        self.pyi = pyi
         self.cpp = cpp
         self.hpp = hpp
 
@@ -83,6 +85,8 @@ class PyExtGenFactory(Visitor):
         
         self.pxd.println("cdef class ObjFactory(VisitorBase):")
         self.pxd.inc_indent()
+        self.pxd.println("cdef bool _obj_owned")
+        self.pxd.println("cdef object _obj")
         
         self.pyx.println("cdef class ObjFactory(VisitorBase):")
         self.pyx.inc_indent()
@@ -91,13 +95,13 @@ class PyExtGenFactory(Visitor):
         self.pyx.inc_indent()
         self.pyx.println("super().__init__()")
         self.pyx.println("self._obj = None")
-        self.pyx.println("self._owned = False")
+        self.pyx.println("self._obj_owned = False")
         self.pyx.dec_indent()
 
         self.pyx.println("def mk(self, obj, owned):")
         self.pyx.inc_indent()
         self.pyx.println("self._obj = None")
-        self.pyx.println("self._owned = owned")
+        self.pyx.println("self._obj_owned = owned")
         for i,c in enumerate(ast.rootClasses()):
             if i == 0:
                 self.pyx.println("if isinstance(obj, %s):" % c.name)

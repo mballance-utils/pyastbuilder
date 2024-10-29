@@ -257,6 +257,7 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("ext_dir = os.path.dirname(os.path.abspath(__file__))")
         self.pyx.println("build_dir = os.path.abspath(os.path.join(ext_dir, \"../../build\"))")
         self.pyx.println("libname = \"lib%s.so\"" % self.name)
+        self.pyx.println("core_lib = None")
         self.pyx.println("for libdir in (\"lib\", \"lib64\"):")
         self.pyx.inc_indent()
         self.pyx.println("if os.path.isfile(os.path.join(build_dir, libdir, libname)):")

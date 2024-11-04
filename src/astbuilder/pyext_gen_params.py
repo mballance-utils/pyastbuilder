@@ -4,6 +4,7 @@ Created on May 28, 2022
 @author: mballance
 '''
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
+from astbuilder.pyext_type_name_gen_pyi import PyExtTypeNameGenPyi
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.type_pointer import TypePointer
 from astbuilder.ast_enum import AstEnum
@@ -59,6 +60,36 @@ class PyExtGenParams(object):
             ret = True
         
         return ret    
+    
+    @classmethod
+    def gen_ctor_params_pyi(cls, 
+        ns, 
+        c, 
+        out): 
+        """Returns True if this level (or a previous level) added content"""
+        ret = False
+            
+        if c.super is not None:
+            # Recurse first
+            ret |= cls.gen_ctor_params_pyi(ns, c.super.target, out)
+        else:
+            out.write("self")
+
+        ret = True
+
+        out.inc_indent()
+        params = list(filter(lambda d : d.is_ctor, c.data))
+        for i,p in enumerate(params):
+            if i == 0:
+                out.write(",\n")
+            out.write(out.ind)
+            out.write(p.name + " : ")
+            out.write(PyExtTypeNameGenPyi(ns=ns).gen(p.t))
+            out.write((",\n" if i+1 < len(params) else ""))
+            ret = True
+        out.dec_indent()            
+
+        return ret
     
     @classmethod
     def gen_ctor_pvals(cls, name, c, out):

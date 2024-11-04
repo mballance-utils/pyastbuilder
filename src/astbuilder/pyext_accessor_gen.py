@@ -1,4 +1,5 @@
 from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
+from astbuilder.pyext_type_name_gen_pyi import PyExtTypeNameGenPyi
 from astbuilder.type_pointer import PointerKind
 from astbuilder.type_scalar import TypeKind
 from astbuilder.visitor import Visitor
@@ -22,13 +23,14 @@ class PyExtAccessorGen(Visitor):
     #
     #
     
-    def __init__(self, name, clsname, decl_pxd, pxd, pyx):
+    def __init__(self, name, clsname, decl_pxd, pxd, pyx, pyi):
         super().__init__()
         self.name = name
         self.clsname = clsname
         self.pxd = pxd
         self.decl_pxd = decl_pxd
         self.pyx = pyx
+        self.pyi = pyi
         self.field = None
         self.decl_pxd_ptr_tgen = PyExtTypeNameGen(
                 ns=self.name,
@@ -44,6 +46,7 @@ class PyExtAccessorGen(Visitor):
                 is_pytype=False,
                 is_ref=True,
                 is_const=True)
+        self.pyi_tgen = PyExtTypeNameGenPyi(ns=self.name)
         self.list_accessor_gen = PyExtListAccessorGen(
             name, clsname, decl_pxd, pxd, pyx)
         
@@ -59,6 +62,8 @@ class PyExtAccessorGen(Visitor):
             t, 
             is_pydecl=False,
             is_pytype=False) + " get" + name + "();")
+        self.pyi.println("def get%s(self) -> %s: ..." % (name, self.pyi_tgen.gen(t)))
+        self.pyi.println()
         
     
     def visitTypeMap(self, t):
@@ -92,6 +97,9 @@ class PyExtAccessorGen(Visitor):
             self.gen_sptr_accessors(t)
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
+
+        self.pyi.println("def get%s(self) -> %s: ..." % (name, tname))
+        self.pyi.println()
 
     def visitAstClass(self, c):
         self.gen_class_accessors(c)
@@ -178,6 +186,11 @@ class PyExtAccessorGen(Visitor):
         # Generate a non-const accessor
         self.decl_pxd.println("void set" + name + "(" +
             self.decl_pxd_ptr_tgen.gen(t) + " v)")
+        
+        self.pyi.println("def set%s(self, v : %s): ..." % (
+            name, 
+            self.pyi_tgen.gen(t)))
+        self.pyi.println()
 
         print("<-- gen_enum_accessors %s" % self.field.name)
 
@@ -261,6 +274,9 @@ class PyExtAccessorGen(Visitor):
                          (self.name, self.clsname, name))
         self.pyx.dec_indent()
 
+        self.pyi.println("def get%s(self) -> str: ..." % name)
+        self.pyi.println()
+
         # Generate a setter
         self.decl_pxd.println("void set%s(%s v)" % (
             name,
@@ -277,6 +293,9 @@ class PyExtAccessorGen(Visitor):
         self.pyx.println("dynamic_cast[%s_decl.I%sP](self._hndl).set%s(v.encode())" % (
                 self.name, self.clsname, name))
         self.pyx.dec_indent()
+
+        self.pyi.println("def set%s(self, v : str): ..." % name)
+        self.pyi.println()
 
     def const_ref_ret(self, t, is_pydecl=False, is_pytype=False):
         return PyExtTypeNameGen(ns=self.name,compressed=True,is_pydecl=is_pydecl,

@@ -63,6 +63,8 @@ class PyExtGenPyx(Visitor):
             self.pyx.println("cimport %s_decl" % self.name)
         
         self.pyx.println("from enum import IntEnum")
+        self.pyi.println("from enum import IntEnum, auto")
+        self.pyi.println("from typing import Dict, List, Tuple")
         
         for e in ast.enums:
             if self.namespace is not None:
@@ -77,6 +79,9 @@ class PyExtGenPyx(Visitor):
 
             self.pyx.println("class %s(IntEnum):" % e.name)
             self.pyx.inc_indent()
+            
+            self.pyi.println("class %s(IntEnum):" % e.name)
+            self.pyi.inc_indent()
                         
             for i,v in enumerate(e.values):
                 if self.namespace is not None:
@@ -87,10 +92,13 @@ class PyExtGenPyx(Visitor):
                         e.name, v[0], e.name + "::" + v[0]))
                 self.pyx.println("%s = %s_decl.%s.%s_%s" % (
                     v[0], self.name, e.name, e.name, v[0]))
+                self.pyi.println("%s = auto()" % v[0])
+            self.pyi.println()
                 
             self.decl_pxd.dec_indent()                
             self.decl_pxd.dec_indent()                
             self.pyx.dec_indent()
+            self.pyi.dec_indent()
 
         for e in ast.structs:
             if self.namespace is not None:
@@ -124,6 +132,9 @@ class PyExtGenPyx(Visitor):
 
             self.pyx.println("class %s(IntEnum):" % e.name)
             self.pyx.inc_indent()
+
+            self.pyi.println("class %s(IntEnum):" % e.name)
+            self.pyi.inc_indent()
                         
             for i,v in enumerate(e.values):
                 if self.namespace is not None:
@@ -134,10 +145,13 @@ class PyExtGenPyx(Visitor):
                         e.name, v, e.name + "::" + v))
                 self.pyx.println("%s = %s_decl.%s.%s_%s" % (
                     v, self.name, e.name, e.name, v))
+                self.pyi.println("%s = auto()" % v)
+            self.pyi.println()
                 
             self.decl_pxd.dec_indent()                
             self.decl_pxd.dec_indent()                
             self.pyx.dec_indent()
+            self.pyi.dec_indent()
 
         self.gen_factory_decl()
         self.gen_factory()
@@ -211,8 +225,10 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("cdef Factory _inst = None")
         self.pxd.println("cdef class Factory(object):")
         self.pyx.println("cdef class Factory(object):")
+        self.pyi.println("class Factory(object):")
         self.pxd.inc_indent()
         self.pyx.inc_indent()
+        self.pyi.inc_indent()
         self.pxd.println("cdef %s_decl.IFactory *_hndl" % (self.name,))
 
         for c in self.ast.classes:
@@ -221,6 +237,9 @@ class PyExtGenPyx(Visitor):
             PyExtGenParams.gen_ctor_params(
                 self.name, c, self.pxd, is_pydecl=True, is_pytype=True, ins_self=True)
             self.pxd.write(")\n")
+            self.pyi.write("%sdef mk%s(" % (self.pyi.ind, name))
+            PyExtGenParams.gen_ctor_params_pyi(self.name, c, self.pyi)
+            self.pyi.write(") -> '%s': ...\n" % c.name)
 
             self.pyx.print("cpdef %s mk%s(" % (c.name, name))
             self.pyx.inc_indent(2) 
@@ -287,9 +306,14 @@ class PyExtGenPyx(Visitor):
 
         self.pyx.println("return _inst")
         self.pyx.dec_indent()
+
+        self.pyi.println("@staticmethod")
+        self.pyi.println("def inst() -> 'Factory': ...")
+        self.pyi.println()
         
         self.pxd.dec_indent()
         self.pyx.dec_indent()
+        self.pyi.dec_indent()
 
     def visitAstClass(self, c : AstClass):
         
@@ -317,13 +341,19 @@ class PyExtGenPyx(Visitor):
                 c.name, PyExtTypeNameGen(ns=self.name,is_pytype=True).gen(c.super)))
             self.pxd.println("cdef class %s(%s):" % (
                 c.name, PyExtTypeNameGen(self.name, is_pytype=True).gen(c.super)))
+            self.pyi.println("class %s(%s):" % (
+                c.name, PyExtTypeNameGen(self.name, is_pytype=True).gen(c.super)))
         else:
             self.pyx.println("cdef class %s(object):" % c.name)
             self.pxd.println("cdef class %s(object):" % c.name)
+            self.pyi.println("class %s(object):" % c.name)
             
                         
         self.pyx.inc_indent()
         self.pxd.inc_indent()
+        self.pyi.inc_indent()
+
+        self.pyi.println("pass")
         
         if c.super is None:
             self.pxd.println("cdef %s_decl.I%s    *_hndl" % (self.name, c.name))
@@ -331,6 +361,7 @@ class PyExtGenPyx(Visitor):
             
         self.pyx.println()
         self.pxd.println()
+        self.pyi.println()
             
         if c.super is None:
             self.pyx.println("def __dealloc__(self):")
@@ -406,7 +437,7 @@ class PyExtGenPyx(Visitor):
 #         self.pyx.println()
 
         for d in c.data:
-            PyExtAccessorGen(self.name, c.name, self.decl_pxd, self.pxd, self.pyx).gen(d)
+            PyExtAccessorGen(self.name, c.name, self.decl_pxd, self.pxd, self.pyx, self.pyi).gen(d)
 
         if len(c.data) == 0:
             self.decl_pxd.println("pass")
@@ -421,6 +452,7 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.dec_indent()        
         self.pyx.dec_indent()        
         self.pxd.dec_indent()
+        self.pyi.dec_indent()
         
         self.decl_pxd.println()
         self.pyx.println()

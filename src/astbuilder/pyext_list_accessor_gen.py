@@ -39,6 +39,27 @@ class PyExtListAccessorGen(Visitor):
 
     def gen(self, field, t):
         self.field = field
+
+        cname = self.field.name[0].upper() + self.field.name[1:]
+        lname = self.field.name.lower()
+        sname = cname
+        if sname.endswith("ren"):
+            sname = sname[:-3]
+        elif sname.endswith("s"):
+            sname = sname[:-1]
+
+        self.pyx.println("def %s(self) -> ListUtil:" % lname)
+        self.pyx.inc_indent()
+        self.pyx.println("return ListUtil(self.num%s, self.get%s)" % (cname, sname))
+        self.pyx.dec_indent()
+        self.pyx.println()
+
+        self.pyi.println("def %s(self) -> ListUtil..." % lname)
+        self.pyi.inc_indent()
+        self.pyi.println("\"\"\"Returns an iterator over the items\"\"\"")
+        self.pyi.dec_indent()
+        self.pyi.println()
+
         t.accept(self)
         pass
 
@@ -46,6 +67,8 @@ class PyExtListAccessorGen(Visitor):
         print("list-pointer accessor")
 #        self._getAsIterator(t)
         self._getAsList(t)
+
+
         self._getAt(t)
         self._addItem(t)
         self._getSize(t)

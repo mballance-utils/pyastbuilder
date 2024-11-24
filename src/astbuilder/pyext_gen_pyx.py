@@ -16,6 +16,7 @@ from astbuilder.type_pointer import TypePointer
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
 from astbuilder.pyext_gen_params import PyExtGenParams
+from astbuilder.pyext_gen_utils import PyExtGenUtils
 
 
 class PyExtGenPyx(Visitor):
@@ -52,6 +53,7 @@ class PyExtGenPyx(Visitor):
 
         self.pyx.println("import ctypes")
         self.pyx.println("import os")
+        self.pyx.println("from typing import List, Iterable")
         self.pyx.println("from libc.stdint cimport intptr_t")
         self.pyx.println("from cython.operator cimport dereference") #  as deref
 
@@ -66,6 +68,9 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("from enum import IntEnum")
         self.pyi.println("from enum import IntEnum, auto")
         self.pyi.println("from typing import Dict, List, Tuple")
+
+        self.pyx.println()
+        PyExtGenUtils(self.pyx, self.pyi).gen()
         
         for e in ast.enums:
             if self.namespace is not None:

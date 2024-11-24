@@ -14,6 +14,7 @@ import os
 from astbuilder.pyext_gen_extdef import PyExtGenExtDef
 from astbuilder.pyext_gen_pyx import PyExtGenPyx
 from astbuilder.pyext_gen_factory import PyExtGenFactory
+from astbuilder.pyext_gen_utils import PyExtGenUtils
 from astbuilder.pyext_gen_visitor import PyExtGenVisitor
 
 

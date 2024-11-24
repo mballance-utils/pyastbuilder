@@ -6,6 +6,7 @@ from astbuilder.visitor import Visitor
 from .ast_enum import AstEnum
 from .ast_flags import AstFlags
 from .pyext_list_accessor_gen import PyExtListAccessorGen
+from .pyext_map_accessor_gen import PyExtMapAccessorGen
 
 
 class PyExtAccessorGen(Visitor):
@@ -48,7 +49,9 @@ class PyExtAccessorGen(Visitor):
                 is_const=True)
         self.pyi_tgen = PyExtTypeNameGenPyi(ns=self.name)
         self.list_accessor_gen = PyExtListAccessorGen(
-            name, clsname, decl_pxd, pxd, pyx)
+            name, clsname, decl_pxd, pxd, pyx, pyi)
+        self.map_accessor_gen = PyExtMapAccessorGen(
+            name, clsname, decl_pxd, pxd, pyx, pyi)
         
     def gen(self, field):
         self.field = field
@@ -67,7 +70,7 @@ class PyExtAccessorGen(Visitor):
         
     
     def visitTypeMap(self, t):
-        self.gen_collection_accessors(t)
+        self.map_accessor_gen.gen(self.field, t)
         
     def visitTypePointer(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
@@ -257,7 +260,7 @@ class PyExtAccessorGen(Visitor):
         
         # Generate a read-only accessor
         self.decl_pxd.println(
-            PyExtTypeNameGen(ns=self.name,compressed=True,is_ref=True,is_const=True).gen(t) + 
+            PyExtTypeNameGen(ns=self.name,compressed=True,is_pydecl=True,is_ref=True,is_const=True).gen(t) + 
             "get%s()" % name)
         self.decl_pxd.println()
 
@@ -280,7 +283,7 @@ class PyExtAccessorGen(Visitor):
         # Generate a setter
         self.decl_pxd.println("void set%s(%s v)" % (
             name,
-            PyExtTypeNameGen(ns=self.name,compressed=True,is_const=True,is_ref=True).gen(t)
+            PyExtTypeNameGen(ns=self.name,compressed=True,is_pydecl=True, is_const=True,is_ref=True).gen(t)
         ))
 
         self.pxd.println("cpdef void set%s(self, %s v)" % (

@@ -1,5 +1,5 @@
 #****************************************************************************
-#* py_ext_list_accessor_gen.py
+#* py_ext_map_accessor_gen.py
 #*
 #* Copyright 2023 Matthew Ballance and Contributors
 #*
@@ -22,8 +22,12 @@
 from astbuilder.visitor import Visitor
 from astbuilder.type_pointer import PointerKind
 from astbuilder.type_scalar import TypeKind
+from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
+from astbuilder.type_map import TypeMap
+from astbuilder.pyext_call_param_gen import PyExtCallParamGen
+from astbuilder.pyext_rval_gen import PyExtRvalGen
 
-class PyExtListAccessorGen(Visitor):
+class PyExtMapAccessorGen(Visitor):
 
     def __init__(self, name, clsname, decl_pxd, pxd, pyx, pyi):
         super().__init__()
@@ -34,65 +38,58 @@ class PyExtListAccessorGen(Visitor):
         self.pyx = pyx
         self.pyi = pyi
         self.field = None
+        self.tgen_decl_decl = PyExtTypeNameGen(
+            ns=self.name,
+            compressed=True,
+            is_pytype=False,
+            is_pydecl=False,
+            is_ref=False,
+            is_const=False)
+        self.tgen_decl = PyExtTypeNameGen(
+            ns=self.name,
+            compressed=True,
+            is_pytype=False,
+            is_pydecl=True,
+            is_ref=False,
+            is_const=False)
+        self.tgen_py = PyExtTypeNameGen(
+            ns=self.name,
+            compressed=True,
+            is_pytype=True,
+            is_pydecl=False,
+            is_ref=False,
+            is_const=False)
 
         pass
 
-    def gen(self, field, t):
+    def gen(self, field, t : TypeMap):
         self.field = field
-        t.accept(self)
+        self.mtype = t
+        cname = self.field.name[0].upper() + self.field.name[1:]
+#        t.vt.accept(self)
+        # Generate C++ import
+        self.decl_pxd.println("std_unordered_map[%s,%s] &get%s()" % (
+            self.tgen_decl_decl.gen(t.kt),
+            self.tgen_decl_decl.gen(t.vt),
+            cname
+        ))
+        self._hasKey(t)
+        self._getItem(t)
         pass
+
+    def visitTypeScalar(self, t):
+        """Value-type is a scalar"""
+        print("map-scalar accessor")
+        return super().visitTypeScalar(t)
 
     def visitTypePointer(self, t):
-        print("list-pointer accessor")
+        """Value-type is a pointer"""
+        print("mapp-pointer accessor")
 #        self._getAsIterator(t)
-        self._getAsList(t)
-        self._getAt(t)
-        self._addItem(t)
-        self._getSize(t)
-
-#     def _getAsIterator(self, t):
-#         name = self.field.name[0].upper() + self.field.name[1:]
-#         tname = t.t.name
-
-#         self.pxd.println("cpdef get%s(self)" % name)
-        
-#         self.pyx.println("cpdef get%s(self):" % name)
-#         self.pyx.inc_indent()
-#         self.pyx.println()
-#         self.pyx.println("class Iterator(object):")
-#         self.pyx.inc_indent()
-#         self.pyx.println("pass")
-#         self.pyx.dec_indent()
-
-#         if t.pt == PointerKind.Raw:
-#             self.pyx.println("cdef const std_vector[%s_decl.I%sP] *__lp = &self.as%s().get%s()" % (
-#                 self.name, tname, self.clsname, name))
-#         elif t.pt == PointerKind.Unique:
-#             self.pyx.println("cdef const std_vector[%s_decl.I%sUP] *__lp = &self.as%s().get%s()" % (
-#                 self.name, tname, self.clsname, name))
-#         elif t.pt == PointerKind.Shared:
-#             pass
-#         else:
-#             raise Exception("Accessor generation not supported for " + str(self.pt))
-#         self.pyx.println("cdef %s_decl.I%s *__ep;" % (self.name, tname))
-#         self.pyx.println("ret = []")
-#         self.pyx.println("of = ObjFactory()")
-
-#         self.pyx.println("for __i in range(__lp.size()):")
-#         self.pyx.inc_indent()
-#         if t.pt == PointerKind.Raw:
-#             self.pyx.println("__ep = __lp.at(__i)")
-#         elif t.pt == PointerKind.Unique:
-#             self.pyx.println("__ep = __lp.at(__i).get()")
-#         elif t.pt == PointerKind.Shared:
-# #            self.gen_sptr_accessors(t)
-#             pass
-#         else:
-#             raise Exception("Accessor generation not supported for " + str(self.pt))
-#         self.pyx.println("ret.append(__ep.accept(of._hndl))")
-#         self.pyx.dec_indent()
-#         self.pyx.println("return ret")
-#         self.pyx.dec_indent()
+#        self._getAsList(t)
+#        self._getAt(t)
+#        self._addItem(t)
+#        self._getSize(t)
 
     def _getAsList(self, t):
         name = self.field.name[0].upper() + self.field.name[1:]
@@ -137,34 +134,66 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.println("return ret")
         self.pyx.dec_indent()
 
-    def _getAt(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+    def _hasKey(self, t : TypeMap):
+        name = self.field.name
+        cname = self.field.name[0].upper() + self.field.name[1:]
         pname = name
         if pname.endswith("ren"):
             pname = name[:-3]
         elif pname.endswith("s"):
             pname = name[:-1]
-        tname = t.t.name
+#        tname = t.t.name
 
-        self.pxd.println("cpdef get%s(self, i)" % pname)
-        
-        self.pyx.println("cpdef get%s(self, i):" % pname)
+        self.pxd.println("cpdef bool %sHas(self, %s i)" % (
+            name,
+            self.tgen_py.gen(t.kt)))
+
+        self.pyx.println("cpdef bool %sHas(self, %s i):" % (
+            name,
+            self.tgen_py.gen(t.kt)))
         self.pyx.inc_indent()
 
-        if t.pt == PointerKind.Raw:
-            self.pyx.println("cdef %s_decl.I%s *__ep = self.as%s().get%s().at(i);" % (
-                self.name, tname, self.clsname, name))
-        elif t.pt == PointerKind.Unique:
-            self.pyx.println("cdef %s_decl.I%s *__ep = self.as%s().get%s().at(i).get();" % (
-                self.name, tname, self.clsname, name))
-        elif t.pt == PointerKind.Shared:
-            pass
-        else:
-            raise Exception("Accessor generation not supported for " + str(self.pt))
-        self.pyx.println("of = ObjFactory()")
-        self.pyx.println("__ep.accept(of._hndl)")
+        self.pyx.println("cdef std_unordered_map[%s,%s].const_iterator it = self.as%s().get%s().find(%s)" % (
+            self.tgen_decl.gen(t.kt),
+            self.tgen_decl.gen(t.vt),
+            self.clsname,
+            cname,
+            PyExtCallParamGen(self.name).gen("i", t.kt)))
+        self.pyx.println("return (it != self.as%s().get%s().end())" % (
+            self.clsname,
+            cname))
 
-        self.pyx.println("return of._obj")
+        self.pyx.dec_indent()
+
+    def _getItem(self, t : TypeMap):
+        name = self.field.name
+        cname = self.field.name[0].upper() + self.field.name[1:]
+        pname = name
+        if pname.endswith("ren"):
+            pname = name[:-3]
+        elif pname.endswith("s"):
+            pname = name[:-1]
+
+        self.pxd.println("cpdef %s %sAt(self, %s i)" % (
+            self.tgen_py.gen(t.vt),
+            name,
+            self.tgen_py.gen(t.kt)))
+
+        self.pyx.println("cpdef %s %sAt(self, %s i):" % (
+            self.tgen_py.gen(t.vt),
+            name,
+            self.tgen_py.gen(t.kt)))
+        self.pyx.inc_indent()
+
+        self.pyx.println("cdef std_unordered_map[%s,%s].const_iterator it = self.as%s().get%s().find(%s)" % (
+            self.tgen_decl.gen(t.kt),
+            self.tgen_decl.gen(t.vt),
+            self.clsname,
+            cname,
+            PyExtCallParamGen(self.name).gen("i", t.kt)))
+
+        PyExtRvalGen(self.name, self.pyx).gen("dereference(it).second", t.vt)
+
         self.pyx.dec_indent()
 
     def _addItem(self, t):

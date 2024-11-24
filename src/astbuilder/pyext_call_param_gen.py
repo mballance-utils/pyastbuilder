@@ -21,31 +21,17 @@ from astbuilder.ast_struct import AstStruct
 #                   - Use I<type>P for pointer types
 # False   False   - We're in the _decl.pxd using a non-Python type
 
-class PyExtTypeNameGen(Visitor):
+class PyExtCallParamGen(Visitor):
     
-    def __init__(self, 
-                 ns,
-                 compressed=False, 
-                 is_pytype=False,
-                 is_pydecl=False,
-                 is_ret=False,
-                 is_ref=False,
-                 is_ptr=False,
-                 is_const=False):
+    def __init__(self, ns) :
         self.out = ""
         self.ns = ns
-#        self.compressed = compressed
-        self.compressed = False
-        self.is_pytype = is_pytype
-        self.is_pydecl = is_pydecl
-        self.is_ret = is_ret
-        self.is_ref = is_ref
-        self.is_ptr = is_ptr
-        self.is_const = is_const
+        self.param = None
         self.depth = 0
         
-    def gen(self, t):
+    def gen(self, param, t):
         self.out = ""
+        self.param = param
         t.accept(self)
         return self.out
 
@@ -166,41 +152,10 @@ class PyExtTypeNameGen(Visitor):
                 is_pydecl=self.is_pydecl).gen(t)
 
     def visitTypeScalar(self, t : TypeScalar):
-        vmap_decl = {
-            TypeKind.String : "std_string",
-            TypeKind.Bool : "bool",
-            TypeKind.Int8: "int8_t",
-            TypeKind.Uint8: "uint8_t",
-            TypeKind.Int16: "int16_t",
-            TypeKind.Uint16: "uint16_t",
-            TypeKind.Int32: "int32_t",
-            TypeKind.Uint32: "uint32_t",
-            TypeKind.Int64: "int64_t",
-            TypeKind.Uint64: "uint64_t",
-            }
-        vmap_py = {
-            TypeKind.String : "str",
-            TypeKind.Bool : "bool",
-            TypeKind.Int8: "int8_t",
-            TypeKind.Uint8: "uint8_t",
-            TypeKind.Int16: "int16_t",
-            TypeKind.Uint16: "uint16_t",
-            TypeKind.Int32: "int32_t",
-            TypeKind.Uint32: "uint32_t",
-            TypeKind.Int64: "int64_t",
-            TypeKind.Uint64: "uint64_t",
-            }
-        
-        if not self.is_pydecl and self.is_pytype:
-            vmap = vmap_py
+        if t.t == TypeKind.String:
+            self.out += "%s.encode()" % self.param
         else:
-            vmap = vmap_decl
-
-        if self.is_const:
-            self.out += "const "
-        self.out += vmap[t.t]
-        if self.is_ref:
-            self.out += " &"
+            self.out += self.param
     
     def visitAstStruct(self, s : AstStruct):
         if self.is_const:
@@ -210,7 +165,7 @@ class PyExtTypeNameGen(Visitor):
             self.out += " &"
 
     def visitTypeUserDef(self, t):
-        print("PyExtTyeNameGen: TypeUserDef")
+        print("PyCallParamGen: TypeUserDef")
 
         if isinstance(t.target, (AstEnum,AstFlags)):
             t.target.accept(self)

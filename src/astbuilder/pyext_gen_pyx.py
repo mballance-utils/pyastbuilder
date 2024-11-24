@@ -53,6 +53,7 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("import ctypes")
         self.pyx.println("import os")
         self.pyx.println("from libc.stdint cimport intptr_t")
+        self.pyx.println("from cython.operator cimport dereference") #  as deref
 
         pkg_elems = self.target_pkg.split(".")
         if len(pkg_elems) > 1:
@@ -165,11 +166,13 @@ class PyExtGenPyx(Visitor):
         out.println("from libcpp.cast cimport static_cast")
         out.println("from libcpp.string cimport string as      std_string")
         out.println("from libcpp.map cimport map as            std_map")
+        out.println("from libcpp.unordered_map cimport unordered_map as  std_unordered_map")
         out.println("from libcpp.memory cimport unique_ptr, shared_ptr")
         out.println("from libcpp.vector cimport vector as std_vector")
         out.println("from libcpp.utility cimport pair as  std_pair")
         out.println("from libcpp cimport bool as          bool")
         out.println("cimport cpython.ref as cpy_ref")
+        out.println("from cython.operator cimport dereference") #  as deref
         out.println()
 
         out.println("cdef extern from \"zsp/ast/impl/UP.h\" namespace \"zsp::ast\":")
@@ -235,7 +238,7 @@ class PyExtGenPyx(Visitor):
             name = c.name[0].upper() + c.name[1:]
             self.pxd.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
             PyExtGenParams.gen_ctor_params(
-                self.name, c, self.pxd, is_pydecl=True, is_pytype=True, ins_self=True)
+                self.name, c, self.pxd, is_pydecl=False, is_pytype=True, ins_self=True)
             self.pxd.write(")\n")
             self.pyi.write("%sdef mk%s(" % (self.pyi.ind, name))
             PyExtGenParams.gen_ctor_params_pyi(self.name, c, self.pyi)
@@ -343,6 +346,13 @@ class PyExtGenPyx(Visitor):
                 c.name, PyExtTypeNameGen(self.name, is_pytype=True).gen(c.super)))
             self.pyi.println("class %s(%s):" % (
                 c.name, PyExtTypeNameGen(self.name, is_pytype=True).gen(c.super)))
+            if c.doc is not None:
+                self.pyi.inc_indent()
+                self.pyi.println("\"\"\"")
+                for line in c.doc.split('\n'):
+                    self.pyi.println(line)
+                self.pyi.println("\"\"\"")
+                self.pyi.dec_indent()
         else:
             self.pyx.println("cdef class %s(object):" % c.name)
             self.pxd.println("cdef class %s(object):" % c.name)
@@ -369,6 +379,7 @@ class PyExtGenPyx(Visitor):
             self.pyx.println("if self._owned and self._hndl != NULL:")
             self.pyx.inc_indent()
             self.pyx.println("del self._hndl")
+            self.pyx.println("self._hndl = NULL")
             self.pyx.dec_indent()
             self.pyx.dec_indent()
             self.pyx.println()

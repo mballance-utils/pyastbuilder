@@ -67,6 +67,8 @@ class Parser(object):
                             ast_cls.super = TypeUserDef(root[key])
                         elif key == "data":
                             self.parse_class_data(ast_cls, root[key])
+                        elif key == "doc":
+                            ast_cls.doc = root[key]
                         else:
                             raise Exception("Unknown class key " + str(key))
                 elif isinstance(root, list):
@@ -76,6 +78,8 @@ class Parser(object):
                             ast_cls.super = TypeUserDef(elem[key])
                         elif key == "data":
                             self.parse_class_data(ast_cls, elem[key])
+                        elif key == "doc":
+                            ast_cls.doc = root[key]
                         else:
                             raise Exception("Unknown class key " + str(key))
         else:
@@ -113,6 +117,8 @@ class Parser(object):
                         init = str(it['init'])
                     elif key == "visit":
                         visit = bool(it['visit'])
+                    elif key == "doc":
+                        ast_cls.doc = it['doc']
                     else:
                         raise Exception("Unknown data-item key " + key)
                     

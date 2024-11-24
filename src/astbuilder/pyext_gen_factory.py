@@ -98,28 +98,26 @@ class PyExtGenFactory(Visitor):
         self.pyx.println("self._obj_owned = False")
         self.pyx.dec_indent()
 
-        self.pyx.println("def mk(self, obj, owned):")
-        self.pyx.inc_indent()
-        self.pyx.println("self._obj = None")
-        self.pyx.println("self._obj_owned = owned")
-        for i,c in enumerate(ast.rootClasses()):
-            if i == 0:
-                self.pyx.println("if isinstance(obj, %s):" % c.name)
-            else:
-                self.pyx.println("elif isinstance(obj, %s):" % c.name)
-            self.pyx.inc_indent()
-            self.pyx.println("self._hndl.py_accept%s((<%s>obj)._hndl)" % (c.name, c.name))
-            self.pyx.dec_indent()
+        # self.pyx.println("cpdef mk(self, obj, owned):")
+        # self.pyx.inc_indent()
+        # self.pyx.println("self._obj = None")
+        # self.pyx.println("self._obj_owned = owned")
+        # for i,c in enumerate(ast.rootClasses()):
+        #     if i == 0:
+        #         self.pyx.println("if isinstance(obj, %s):" % c.name)
+        #     else:
+        #         self.pyx.println("elif isinstance(obj, %s):" % c.name)
+        #     self.pyx.inc_indent()
+        #     self.pyx.println("self._hndl.py_accept%s((<%s>obj)._hndl)" % (c.name, c.name))
+        #     self.pyx.dec_indent()
             
-        self.pyx.println("else:")
-        self.pyx.inc_indent()
-        self.pyx.println("#ralse Exception('Failed to find appropriate root file')")
-        self.pyx.println("pass")
-        self.pyx.dec_indent()
-        self.pyx.println("return self._obj")
-
-
-        self.pyx.dec_indent()
+        # self.pyx.println("else:")
+        # self.pyx.inc_indent()
+        # self.pyx.println("#ralse Exception('Failed to find appropriate root file')")
+        # self.pyx.println("pass")
+        # self.pyx.dec_indent()
+        # self.pyx.println("return self._obj")
+        # self.pyx.dec_indent()
 
         
         for c in ast.classes:

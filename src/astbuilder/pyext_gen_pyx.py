@@ -412,6 +412,7 @@ class PyExtGenPyx(Visitor):
 #            self.pxd.println("def bool __eq__(self, %s o)" % c.name)
             self.pyx.println("def __eq__(self, o):")
             self.pyx.inc_indent()
+            self.pyx.println("oh = <%s>(o)" % c.name)
             self.pyx.println("return self._hndl == oh._hndl")
             self.pyx.dec_indent()
             self.pyx.println()

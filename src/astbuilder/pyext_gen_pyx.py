@@ -168,6 +168,7 @@ class PyExtGenPyx(Visitor):
     def gen_defs(self, out):
         out.println("from enum import IntEnum")
         out.println("from libcpp.cast cimport dynamic_cast")
+        out.println("from libcpp.cast cimport reinterpret_cast")
         out.println("from libcpp.cast cimport static_cast")
         out.println("from libcpp.string cimport string as      std_string")
         out.println("from libcpp.map cimport map as            std_map")
@@ -396,6 +397,24 @@ class PyExtGenPyx(Visitor):
             self.pyx.println()
             
             self.pxd.println("cpdef void accept(self, VisitorBase v)")
+
+            self.pxd.println("cpdef int id(self)")
+            self.pyx.println("cpdef int id(self):")
+            self.pyx.inc_indent()
+            self.pyx.println("return reinterpret_cast[intptr_t](self._hndl)")
+            self.pyx.dec_indent()
+#            self.pxd.println("def int __hash__(self)")
+            self.pyx.println("def __hash__(self):")
+            self.pyx.inc_indent()
+            self.pyx.println("return reinterpret_cast[intptr_t](self._hndl)")
+            self.pyx.dec_indent()
+            self.pyx.println()
+#            self.pxd.println("def bool __eq__(self, %s o)" % c.name)
+            self.pyx.println("def __eq__(self, o):")
+            self.pyx.inc_indent()
+            self.pyx.println("return self._hndl == oh._hndl")
+            self.pyx.dec_indent()
+            self.pyx.println()
 
 
         self.pyx.println("cdef %s_decl.I%s *as%s(self):" % (self.name, c.name, c.name))

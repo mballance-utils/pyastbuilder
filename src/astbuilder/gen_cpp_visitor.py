@@ -144,7 +144,8 @@ class GenCppVisitor(Visitor):
             if isinstance(d.t, TypeList):
                 # Generate an iterator, as long as the
                 # list is of a complex type
-                if not isinstance(d.t.t, (TypeScalar,)):
+#                if not isinstance(d.t.t, (TypeScalar,)):
+                if isinstance(d.t.t, (TypePointer,)):
                     out_cpp.println("for (std::vector<" + CppTypeNameGen(compressed=True).gen(d.t.t) + ">::const_iterator")
                     out_cpp.inc_indent()
                     out_cpp.inc_indent()

@@ -41,7 +41,8 @@ class PyExtListAccessorGen(Visitor):
         self.field = field
 
         cname = self.field.name[0].upper() + self.field.name[1:]
-        lname = self.field.name.lower()
+#        lname = self.field.name.lower()
+        lname = self.field.name
         sname = cname
         if sname.endswith("ren"):
             sname = sname[:-3]

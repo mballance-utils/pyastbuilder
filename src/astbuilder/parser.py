@@ -40,6 +40,12 @@ class Parser(object):
             else:
                 raise Exception("Unknown section " + key)
             
+        # Order some things to ensure predictable output
+        self.ast.classes.sort(key=lambda x: x.name)
+        self.ast.enums.sort(key=lambda x: x.name)
+        self.ast.flags.sort(key=lambda x: x.name)
+        self.ast.structs.sort(key=lambda x: x.name)
+            
         return self.ast
     
     def parse_classes(self, classes):

@@ -842,7 +842,7 @@ class GenCPP(Visitor):
 #        out.println("install(TARGETS " + self.name + " " + self.name + "_static")
         out.println("install(TARGETS " + self.name)
         out.inc_indent()
-        out.println("DESTINATION lib")
+        out.println("DESTINATION ${CMAKE_INSTALL_LIBDIR}")
         out.println("EXPORT " + self.name + "-targets)")
         out.dec_indent()
         out.println()

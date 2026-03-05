@@ -177,6 +177,8 @@ class Parser(object):
                     for key in root.keys():
                         if key == "data":
                             self.parse_class_data(ast_cls, root[key])
+                        elif key == "doc":
+                            ast_cls.doc = root[key]
                         else:
                             raise Exception("Unknown class key " + str(key))
                 elif isinstance(root, list):
@@ -184,6 +186,8 @@ class Parser(object):
                         key = next(iter(elem))
                         if key == "data":
                             self.parse_class_data(ast_cls, elem[key])
+                        elif key == "doc":
+                            ast_cls.doc = elem[key]
                         else:
                             raise Exception("Unknown class key " + str(key))
         else:

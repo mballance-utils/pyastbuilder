@@ -144,10 +144,10 @@ class PyExtGenVisitor(Visitor):
         print("TARGET_PKG: %s" % self.target_pkg)        
         self.hpp.println("#include <Python.h>")
         self.cpp.println("#include \"PyBaseVisitor.h\"")
-        if self.target_pkg.find('.') != -1:
-            self.cpp.println("#include \"%s_api.h\"" % self.target_pkg[self.target_pkg.find('.')+1:])
-        else:
-            self.cpp.println("#include \"%s_api.h\"" % self.target_pkg)
+        # For nested packages like "zuspec.fe.pss.ast", use the last component "ast"
+        pkg_elems = self.target_pkg.split(".")
+        module_name = pkg_elems[-1]
+        self.cpp.println("#include \"%s_api.h\"" % module_name)
         
 
         CppGenNS.enter(self.namespace, self.hpp)        

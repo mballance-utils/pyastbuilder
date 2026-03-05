@@ -59,8 +59,12 @@ class PyExtGenPyx(Visitor):
 
         pkg_elems = self.target_pkg.split(".")
         if len(pkg_elems) > 1:
-            self.pxd.println("from %s cimport %s_decl" % (pkg_elems[0], pkg_elems[1]))
-            self.pyx.println("from %s cimport %s_decl" % (pkg_elems[0], pkg_elems[1]))
+            # For nested packages like "zuspec.fe.pss.ast", generate:
+            # from zuspec.fe.pss cimport ast_decl
+            pkg_path = ".".join(pkg_elems[:-1])
+            module_name = pkg_elems[-1]
+            self.pxd.println("from %s cimport %s_decl" % (pkg_path, module_name))
+            self.pyx.println("from %s cimport %s_decl" % (pkg_path, module_name))
         else:
             self.pxd.println("cimport %s_decl" % self.name)
             self.pyx.println("cimport %s_decl" % self.name)

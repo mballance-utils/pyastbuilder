@@ -127,7 +127,40 @@ class PyExtGenPyx(Visitor):
             self.decl_pxd.dec_indent()
             self.decl_pxd.dec_indent()
 
-            pass
+            self.pxd.println("cdef class %s:" % e.name)
+            self.pxd.inc_indent()
+            self.pxd.println("cdef %s_decl.%s _val" % (self.name, e.name))
+            self.pxd.println("@staticmethod")
+            self.pxd.println("cdef %s wrap(const %s_decl.%s &v)" % (e.name, self.name, e.name))
+            self.pxd.dec_indent()
+            self.pxd.println()
+
+            self.pyx.println("cdef class %s:" % e.name)
+            self.pyx.inc_indent()
+            for d in e.data:
+                self.pyx.println("@property")
+                self.pyx.println("def %s(self):" % d.name)
+                self.pyx.inc_indent()
+                self.pyx.println("return self._val.%s" % d.name)
+                self.pyx.dec_indent()
+            self.pyx.println("@staticmethod")
+            self.pyx.println("cdef %s wrap(const %s_decl.%s &v):" % (e.name, self.name, e.name))
+            self.pyx.inc_indent()
+            self.pyx.println("ret = %s()" % e.name)
+            self.pyx.println("ret._val = v")
+            self.pyx.println("return ret")
+            self.pyx.dec_indent()
+            self.pyx.dec_indent()
+            self.pyx.println()
+
+            self.pyi.println("class %s:" % e.name)
+            self.pyi.inc_indent()
+            for d in e.data:
+                self.pyi.println("%s: int" % d.name)
+            if len(e.data) == 0:
+                self.pyi.println("pass")
+            self.pyi.dec_indent()
+            self.pyi.println()
 
         for e in ast.flags:
             if self.namespace is not None:
@@ -287,7 +320,9 @@ class PyExtGenPyx(Visitor):
         self.pyx.println("if _inst is None:")
         self.pyx.inc_indent()
         self.pyx.println("ext_dir = os.path.dirname(os.path.abspath(__file__))")
-        self.pyx.println("build_dir = os.path.abspath(os.path.join(ext_dir, \"../../build\"))")
+        pkg_depth = len(self.target_pkg.split("."))
+        up_dirs = "/".join([".."] * pkg_depth)
+        self.pyx.println("build_dir = os.path.abspath(os.path.join(ext_dir, \"%s/build\"))" % up_dirs)
         self.pyx.println("libname = \"lib%s.so\"" % self.name)
         self.pyx.println("core_lib = None")
         self.pyx.println("for libdir in (\"lib\", \"lib64\"):")

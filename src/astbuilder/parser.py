@@ -85,7 +85,7 @@ class Parser(object):
                         elif key == "data":
                             self.parse_class_data(ast_cls, elem[key])
                         elif key == "doc":
-                            ast_cls.doc = root[key]
+                            ast_cls.doc = elem[key]
                         else:
                             raise Exception("Unknown class key " + str(key))
         else:

@@ -148,17 +148,30 @@ class PyExtAccessorGen(Visitor):
         pass
 
     def gen_struct_accessors(self, s):
-        # Generate a read-only accessor
         name = self.field.name[0].upper() + self.field.name[1:]
+
+        # decl_pxd: C++ getter/setter declarations
         self.decl_pxd.println("%s get%s()" % (
             self.decl_pxd_cref_tgen.gen(s),
             name))
         self.decl_pxd.println()
-
-        # Generate a setter
         self.decl_pxd.println("void set%s(%s)" % (
             name,
             self.decl_pxd_cref_tgen.gen(s)))
+
+        # pxd: Python wrapper getter declaration
+        self.pxd.println("cpdef %s get%s(self)" % (s.name, name))
+
+        # pyx: Python wrapper getter implementation
+        self.pyx.println("cpdef %s get%s(self):" % (s.name, name))
+        self.pyx.inc_indent()
+        self.pyx.println("return %s.wrap(dynamic_cast[%s_decl.I%sP](self._hndl).get%s())" % (
+            s.name, self.name, self.clsname, name))
+        self.pyx.dec_indent()
+
+        # pyi: type stub
+        self.pyi.println("def get%s(self) -> '%s': ..." % (name, s.name))
+        self.pyi.println()
 
     def gen_enum_accessors(self, t):
         print("--> gen_enum_accessors %s" % self.field.name)

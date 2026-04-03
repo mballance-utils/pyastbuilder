@@ -218,7 +218,8 @@ class PyExtGenPyx(Visitor):
         out.println("from cython.operator cimport dereference") #  as deref
         out.println()
 
-        out.println("cdef extern from \"zsp/ast/impl/UP.h\" namespace \"zsp::ast\":")
+        out.println("cdef extern from \"%s\" namespace \"%s\":" % (
+            CppGenNS.incpath(self.namespace, "impl/UP.h"), self.namespace))
         out.inc_indent()
         out.println("cpdef cppclass UP[T](unique_ptr[T]):")
         out.inc_indent()

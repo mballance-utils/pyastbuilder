@@ -74,6 +74,82 @@ class PyExtListAccessorGen(Visitor):
         self._addItem(t)
         self._getSize(t)
 
+    def visitTypeScalar(self, t):
+        # Lists of scalar elements (e.g. list<string>, list<int32_t>). Unlike
+        # pointer lists, elements are plain Python values, so there is no
+        # ObjFactory/accept round-trip — just convert at the boundary (str <->
+        # bytes for String).
+        print("list-scalar accessor")
+        self._getAsListScalar(t)
+        self._getAtScalar(t)
+        self._addItemScalar(t)
+        self._getSize(t)
+
+    def _is_string(self, t):
+        return t.t == TypeKind.String
+
+    def _getAtScalar(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        pname = name
+        if pname.endswith("ren"):
+            pname = name[:-3]
+        elif pname.endswith("s"):
+            pname = name[:-1]
+
+        self.pxd.println("cpdef get%s(self, i)" % pname)
+
+        self.pyx.println("cpdef get%s(self, i):" % pname)
+        self.pyx.inc_indent()
+        if self._is_string(t):
+            self.pyx.println("return self.as%s().get%s().at(i).decode()" % (
+                self.clsname, name))
+        else:
+            self.pyx.println("return self.as%s().get%s().at(i)" % (
+                self.clsname, name))
+        self.pyx.dec_indent()
+
+    def _getAsListScalar(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        pname = name
+        if not pname.endswith("ren") and not pname.endswith("s"):
+            pname += "List"
+        sname = name
+        if sname.endswith("ren"):
+            sname = name[:-3]
+        elif sname.endswith("s"):
+            sname = name[:-1]
+
+        self.pxd.println("cpdef get%s(self)" % pname)
+
+        # Build the Python list via the per-element accessor so we never need
+        # to name the C++ element type here (avoids the std_vector[bool]
+        # specialization pitfall).
+        self.pyx.println("cpdef get%s(self):" % pname)
+        self.pyx.inc_indent()
+        self.pyx.println("return [self.get%s(__i) for __i in range(self.num%s())]" % (
+            sname, name))
+        self.pyx.dec_indent()
+
+    def _addItemScalar(self, t):
+        name = self.field.name[0].upper() + self.field.name[1:]
+        pname = name
+        if pname.endswith("ren"):
+            pname = name[:-3]
+        elif pname.endswith("s"):
+            pname = name[:-1]
+
+        self.pxd.println("cpdef void add%s(self, i)" % pname)
+
+        self.pyx.println("cpdef void add%s(self, i):" % pname)
+        self.pyx.inc_indent()
+        if self._is_string(t):
+            self.pyx.println("self.as%s().get%s().push_back(i.encode())" % (
+                self.clsname, name))
+        else:
+            self.pyx.println("self.as%s().get%s().push_back(i)" % (
+                self.clsname, name))
+        self.pyx.dec_indent()
+
 #     def _getAsIterator(self, t):
 #         name = self.field.name[0].upper() + self.field.name[1:]
 #         tname = t.t.name

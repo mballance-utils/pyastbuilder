@@ -14,8 +14,10 @@ jobs:
         python-version: '3.9'
     - name: Configure Python
       run: |
-        # Install dependencies required to load ivpm.yaml file
-        python3 -m pip install ivpm
+        # Install dependencies required to load ivpm.yaml file.
+        # importlib_metadata is needed because ivpm imports the backport on
+        # Python < 3.10 but does not declare it as a dependency.
+        python3 -m pip install ivpm importlib_metadata
         export PYTHONPATH=./src
         python3 -m ivpm update
         ./packages/python/bin/python3 -m pip install setuptools --upgrade

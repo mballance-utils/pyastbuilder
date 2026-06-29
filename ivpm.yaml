@@ -12,6 +12,10 @@ package:
       src: pypi
     - name: toposort
       src: pypi
+    - name: sphinx
+      src: pypi
+    - name: myst-parser
+      src: pypi
 
   - name: default
     deps:

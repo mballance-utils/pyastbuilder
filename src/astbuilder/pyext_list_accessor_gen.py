@@ -232,7 +232,11 @@ class PyExtListAccessorGen(Visitor):
             pass
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
-        self.pyx.println("ret.append(__ep.accept(of._hndl))")
+        # accept() returns void, so appending its result yields a list of
+        # None. The object is produced as a side effect, in of._obj -- which
+        # is exactly how the generated get<Name>(i) accessor reads it.
+        self.pyx.println("__ep.accept(of._hndl)")
+        self.pyx.println("ret.append(of._obj)")
         self.pyx.dec_indent()
         self.pyx.println("return ret")
         self.pyx.dec_indent()

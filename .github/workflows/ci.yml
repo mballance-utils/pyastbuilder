@@ -8,26 +8,35 @@ jobs:
   ci-linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
-    - name: Configure Python
-      run: |
-        # Install dependencies required to load ivpm.yaml file.
-        # importlib_metadata is needed because ivpm imports the backport on
-        # Python < 3.10 but does not declare it as a dependency.
-        python3 -m pip install ivpm importlib_metadata
-        export PYTHONPATH=./src
-        python3 -m ivpm update
-        ./packages/python/bin/python3 -m pip install setuptools --upgrade
-        export BUILD_NUM=$GITHUB_RUN_ID
-        ./packages/python/bin/python3 setup.py bdist_wheel --universal
+        python-version: '3.11'
 
-        #    - name: Build Docs
-        #      run: |
-        #        ./packages/python/bin/sphinx-build -M html ./doc/source build
-        #touch build/html/.nojekyll
+    - name: Stamp build version
+      # Tag builds keep the clean BASE version; everything else gets a
+      # .<run-id> dev suffix, which is what the old BUILD_NUM handling in
+      # setup.py did.
+      run: |
+        case "$GITHUB_REF" in
+          refs/tags/*) echo "tag build -- leaving version clean" ;;
+          *) sed -i 's/^SUFFIX = ""$/SUFFIX = ".'"$GITHUB_RUN_ID"'"/' src/astbuilder/__version__.py ;;
+        esac
+        grep '^SUFFIX = ' src/astbuilder/__version__.py
+
+    - name: Build wheel and sdist
+      run: |
+        python -m pip install --upgrade pip build
+        python -m build
+
+    - name: Smoke-test the built wheel
+      # Against the installed wheel in a clean venv, not the source tree, so
+      # this exercises the artifact that would ship.
+      run: |
+        python -m venv /tmp/venv
+        /tmp/venv/bin/pip install -q dist/*.whl
+        /tmp/venv/bin/astbuilder --help
+        /tmp/venv/bin/python -c "import astbuilder; print(astbuilder.get_version())"
 
     - name: Publish to PyPi
       if: startsWith(github.ref, 'refs/heads/master')
@@ -35,12 +44,3 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
-
-        #    - name: Publish Docs
-        #      if: startsWith(github.ref, 'refs/heads/master')
-        #      uses: JamesIves/github-pages-deploy-action@4.1.7
-        #      with:
-        #branch: gh-pages
-        #        folder: build/html
-
-

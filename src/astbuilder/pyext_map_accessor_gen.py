@@ -129,7 +129,9 @@ class PyExtMapAccessorGen(Visitor):
             pass
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
-        self.pyx.println("ret.append(__ep.accept(of._hndl))")
+        # accept() returns void; the object lands in of._obj as a side effect.
+        self.pyx.println("__ep.accept(of._hndl)")
+        self.pyx.println("ret.append(of._obj)")
         self.pyx.dec_indent()
         self.pyx.println("return ret")
         self.pyx.dec_indent()

@@ -62,26 +62,30 @@ class Linker(Visitor):
         Visitor.visitAstStruct(self, s)
         
     def visitTypeUserDef(self, t):
+        # Resolve the target on *every* reference.
+        #
+        # This used to sit inside the `deps` guard below, so only a class's
+        # first reference to a given type was resolved: a second field of the
+        # same user-defined type kept target=None, and the generators that
+        # dereference it (pyext_accessor_gen.visitTypeUserDef) died with an
+        # AttributeError far from the cause.  The guard belongs to `deps`,
+        # which exists to emit each include once -- it was never about the
+        # target.
+        if t.name in self.ast.class_m.keys():
+            target = self.ast.class_m[t.name]
+        elif t.name in self.ast.struct_m.keys():
+            target = self.ast.struct_m[t.name]
+        elif t.name in self.ast.enum_m.keys():
+            target = self.ast.enum_m[t.name]
+        elif t.name in self.ast.flags_m.keys():
+            target = self.ast.flags_m[t.name]
+        else:
+            # TODO: add external classes later
+            raise Exception("user-defined type " + t.name + " is not declared")
+
+        t.target = target
+
         if not t.name in self.active_class.deps.keys():
-            # Determine what this points to
-            if t.name in self.ast.class_m.keys():
-                ref = AstRef(self.ast.class_m[t.name])
-                self.active_class.deps[t.name] = ref
-                t.target = self.ast.class_m[t.name]
-            elif t.name in self.ast.struct_m.keys():
-                ref = AstRef(self.ast.struct_m[t.name])
-                self.active_class.deps[t.name] = ref
-                t.target = self.ast.struct_m[t.name]
-            elif t.name in self.ast.enum_m.keys():
-                ref = AstRef(self.ast.enum_m[t.name])
-                self.active_class.deps[t.name] = ref
-                t.target = self.ast.enum_m[t.name]
-            elif t.name in self.ast.flags_m.keys():
-                ref = AstRef(self.ast.flags_m[t.name])
-                self.active_class.deps[t.name] = ref
-                t.target = self.ast.flags_m[t.name]
-            else:
-                # TODO: add external classes later
-                raise Exception("user-defined type " + t.name + " is not declared")
+            self.active_class.deps[t.name] = AstRef(target)
     
         

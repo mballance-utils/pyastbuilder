@@ -36,3 +36,9 @@ version = { attr = "astbuilder.__version__._pkg_version" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# Anchors rootdir here, so the enclosing repo's pytest.ini isn't picked up, and
+# puts tests/ on sys.path for the `unit.base_test` imports.
+testpaths = ["tests/unit"]
+pythonpath = ["tests"]

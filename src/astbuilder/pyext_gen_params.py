@@ -7,6 +7,7 @@ from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.pyext_type_name_gen_pyi import PyExtTypeNameGenPyi
 from astbuilder.type_userdef import TypeUserDef
 from astbuilder.type_pointer import TypePointer
+from astbuilder.type_scalar import TypeScalar, TypeKind
 from astbuilder.ast_enum import AstEnum
 from astbuilder.ast_flags import AstFlags
 
@@ -132,6 +133,9 @@ class PyExtGenParams(object):
             elif isinstance(p.t, TypePointer):
                 target = p.t.t.name
                 out.write("%s.as%s()" % (p.name,target) + (",\n" if i+1 < len(params) else ""))
+            elif isinstance(p.t, TypeScalar) and p.t.t == TypeKind.String:
+                # The parameter is declared 'str'; std::string wants bytes
+                out.write("%s.encode()" % p.name + (",\n" if i+1 < len(params) else ""))
             else:
                 out.write(p.name + (",\n" if i+1 < len(params) else ""))
             ret = True

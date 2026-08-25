@@ -212,7 +212,9 @@ class Parser(object):
             "uint32_t" : TypeScalar(TypeKind.Uint32),
             "int32_t" : TypeScalar(TypeKind.Int32),
             "uint64_t" : TypeScalar(TypeKind.Uint64),
-            "int64_t" : TypeScalar(TypeKind.Int64)
+            "int64_t" : TypeScalar(TypeKind.Int64),
+            "float" : TypeScalar(TypeKind.Float32),
+            "double" : TypeScalar(TypeKind.Float64)
             }
         
         if item in primitive_m.keys():

@@ -219,7 +219,6 @@ class PyExtListAccessorGen(Visitor):
             raise Exception("Accessor generation not supported for " + str(self.pt))
         self.pyx.println("cdef %s_decl.I%s *__ep;" % (self.name, tname))
         self.pyx.println("ret = []")
-        self.pyx.println("of = ObjFactory()")
 
         self.pyx.println("for __i in range(__lp.size()):")
         self.pyx.inc_indent()
@@ -232,7 +231,9 @@ class PyExtListAccessorGen(Visitor):
             pass
         else:
             raise Exception("Accessor generation not supported for " + str(self.pt))
-        self.pyx.println("ret.append(__ep.accept(of._hndl))")
+        self.pyx.println("of = ObjFactory()")
+        self.pyx.println("__ep.accept(of._hndl)")
+        self.pyx.println("ret.append(of._obj)")
         self.pyx.dec_indent()
         self.pyx.println("return ret")
         self.pyx.dec_indent()

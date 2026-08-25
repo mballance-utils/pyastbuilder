@@ -109,6 +109,8 @@ class CppTypeNameGen(Visitor):
             TypeKind.Uint32: "uint32_t",
             TypeKind.Int64: "int64_t",
             TypeKind.Uint64: "uint64_t",
+            TypeKind.Float32: "float",
+            TypeKind.Float64: "double",
             }
         if self.is_const:
             self.out += "const "

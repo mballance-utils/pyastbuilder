@@ -177,6 +177,8 @@ class PyExtTypeNameGen(Visitor):
             TypeKind.Uint32: "uint32_t",
             TypeKind.Int64: "int64_t",
             TypeKind.Uint64: "uint64_t",
+            TypeKind.Float32: "float",
+            TypeKind.Float64: "double",
             }
         vmap_py = {
             TypeKind.String : "str",
@@ -189,6 +191,8 @@ class PyExtTypeNameGen(Visitor):
             TypeKind.Uint32: "uint32_t",
             TypeKind.Int64: "int64_t",
             TypeKind.Uint64: "uint64_t",
+            TypeKind.Float32: "float",
+            TypeKind.Float64: "double",
             }
         
         if not self.is_pydecl and self.is_pytype:

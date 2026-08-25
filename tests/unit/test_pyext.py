@@ -6,7 +6,6 @@ Created on Mar 21, 2021
 from unittest.case import TestCase
 from unit.base_test import BaseTest
 import io
-from astbuilder.pyext_gen_pxd import PyExtGenPxd
 from astbuilder.outstream import OutStream
 from astbuilder.gen_cpp import GenCPP
 from astbuilder.pyext_gen import PyExtGen

@@ -426,7 +426,6 @@ class GenCPP(Visitor):
             if d.init == "True":
                 d.init = "true"
 
-            print("Initial: %s %s %s" % (d.name, str(d.init), str(type(d.init))))
             out_cpp.println("m_" + d.name + " = " + d.init + ";")
         out_cpp.dec_indent()
             
@@ -464,7 +463,8 @@ class GenCPP(Visitor):
         out_cls.println("private:\n")
         out_cls.inc_indent()
         for f in c.data:
-            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name + ";")
+            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name +
+                            GenCPP.member_init(f) + ";")
         out_cls.dec_indent()
         
         out_cls.write("};\n")
@@ -479,6 +479,44 @@ class GenCPP(Visitor):
                 
         pass
         
+    @staticmethod
+    def member_init(f):
+        """
+        In-class default initializer for a member declaration.
+
+        Constructors initialize only the `is_ctor` members, and the constructor
+        body assigns only members carrying an explicit `init:` in the YAML.
+        Everything else was left uninitialized, so a `bool` or an integer read
+        back whatever happened to be on the heap. Defaulting at the declaration
+        covers every constructor, including ones added later.
+
+        Members already covered by one of those two paths are left alone: a
+        redundant initializer here would be dead for ctor params, and for an
+        `init:` member it would be a second place to keep in sync.
+
+        Class types (std::string, vectors, maps, smart pointers) already
+        default-construct, so they get nothing.
+        """
+        if f.is_ctor:
+            # Set by the constructor's member-initializer list.
+            return ""
+        if f.init is not None:
+            # An explicit default is emitted as an assignment in the ctor body.
+            return ""
+        t = f.t
+        if isinstance(t, TypeScalar):
+            if t.t == TypeKind.String:
+                return ""
+            elif t.t == TypeKind.Bool:
+                return " = false"
+            elif t.t in (TypeKind.Float32, TypeKind.Float64):
+                return " = 0.0"
+            else:
+                return " = 0"
+        elif isinstance(t, TypePointer) and t.pt == PointerKind.Raw:
+            return " = nullptr"
+        return ""
+
     def define_class_h(self, c):
         out_cls = OutStream()
         
@@ -596,7 +634,8 @@ class GenCPP(Visitor):
         out_cls.println("private:\n")
         out_cls.inc_indent()
         for f in c.data:
-            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name + ";")
+            out_cls.println(CppTypeNameGen(True).gen(f.t) + " m_" + f.name +
+                            GenCPP.member_init(f) + ";")
         out_cls.dec_indent()
         
         

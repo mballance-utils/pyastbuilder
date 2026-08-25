@@ -16,6 +16,8 @@ class TypeKind(Enum):
     Int32 = auto()
     Uint64 = auto()
     Int64 = auto()
+    Float32 = auto()
+    Float64 = auto()
 
 class TypeScalar(object):
     

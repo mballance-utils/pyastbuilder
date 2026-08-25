@@ -75,6 +75,8 @@ class PyExtTypeNameGenPyi(Visitor):
             TypeKind.Uint32: "int",
             TypeKind.Int64: "int",
             TypeKind.Uint64: "int",
+            TypeKind.Float32: "float",
+            TypeKind.Float64: "float",
             }
         self.out += vmap[t.t]
     

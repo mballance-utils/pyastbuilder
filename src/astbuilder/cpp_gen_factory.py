@@ -62,13 +62,17 @@ class CppGenFactory(object):
         out_h.println("};")
 
         self.gen_inst_accessor(out_h, out_cpp)
-        
+
         CppGenNS.leave(self.namespace, out_ih)
         CppGenNS.leave(self.namespace, out_h)
         CppGenNS.leave(self.namespace, out_cpp)
 
+        self.gen_factory_ext(out_cpp)
+
         incdir = CppGenNS.incdir(self.outdir, self.namespace)
-        
+
+        with open(os.path.join(incdir, "FactoryExt.h"), "w") as fp:
+            fp.write(self.gen_factory_ext_h())
         with open(os.path.join(incdir, "IFactory.h"), "w") as fp:
             fp.write(out_ih.content())
         with open(os.path.join(self.outdir, "Factory.h"), "w") as fp:
@@ -108,6 +112,7 @@ class CppGenFactory(object):
         out.println()
         
     def gen_cpp_prelude(self, out):
+        out.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "FactoryExt.h"))
         out.println("#include \"Factory.h\"")
         for c in self.ast.classes:
             out.println("#include \"%s.h\"" % c.name)
@@ -164,18 +169,77 @@ class CppGenFactory(object):
         out_cpp.println("}")
         pass
 
+    @property
+    def api_macro(self):
+        """Name of the macro carrying the entry point's visibility attribute."""
+        return "%s_FACTORY_API" % self.name.upper()
+
+    @property
+    def build_dll_macro(self):
+        """Defined by the library's own build to select the dllexport side."""
+        return "%s_BUILD_DLL" % self.name.upper()
+
+    def qualified(self, sym):
+        if self.namespace is None or self.namespace == "":
+            return sym
+        else:
+            return "%s::%s" % (self.namespace, sym)
+
     def gen_inst_accessor(self, out_h, out_cpp):
         out_cpp.println("std::unique_ptr<Factory> Factory::m_inst;")
-        out_cpp.println()
-        if self.namespace is not None:
-            out_cpp.println("extern \"C\" %s::IFactory *%s_getFactory() {" % (
-                self.namespace, self.name))
-        else:
-            out_cpp.println("extern \"C\" IFactory *%s_getFactory() {" % (self.name,))
+
+    def gen_factory_ext(self, out_cpp):
+        """Emit the exported entry point.
+
+        Deliberately at global scope, outside the namespace block: the
+        definition has to pick up the visibility attribute that FactoryExt.h
+        puts on the declaration.
+        """
+        out_cpp.println("extern \"C\" %s %s *%s_getFactory() {" % (
+            self.api_macro,
+            self.qualified("IFactory"),
+            self.name))
         out_cpp.inc_indent()
-        out_cpp.println("return Factory::inst();")
+        out_cpp.println("return %s::inst();" % self.qualified("Factory"))
         out_cpp.dec_indent()
         out_cpp.println("}")
+
+    def gen_factory_ext_h(self):
+        """Header declaring the library's sole exported symbol.
+
+        Everything else in the API is reached through the pure-virtual
+        interfaces the factory returns, so this one entry point is the entire
+        exported surface.  Windows needs that visibility declared explicitly:
+        without it the symbol is absent from the export table, so neither
+        GetProcAddress nor a link against the import library can find it --
+        and exporting everything instead costs megabytes of mangled names in
+        both the DLL and its import library.
+        """
+        out = OutStream()
+        out.println("/****************************************************************************")
+        out.println(" * FactoryExt.h")
+        if self.license is not None:
+            out.write(self.license)
+        out.println(" ****************************************************************************/")
+        out.println("#pragma once")
+        out.println("#include \"%s\"" % CppGenNS.incpath(self.namespace, "IFactory.h"))
+        out.println()
+        out.println("#if defined(_WIN32)")
+        out.println("#  if defined(%s)" % self.build_dll_macro)
+        out.println("#    define %s __declspec(dllexport)" % self.api_macro)
+        out.println("#  else")
+        out.println("#    define %s __declspec(dllimport)" % self.api_macro)
+        out.println("#  endif")
+        out.println("#else")
+        out.println("#  define %s" % self.api_macro)
+        out.println("#endif")
+        out.println()
+        out.println("extern \"C\" %s %s *%s_getFactory();" % (
+            self.api_macro,
+            self.qualified("IFactory"),
+            self.name))
+
+        return out.content()
 
 
     

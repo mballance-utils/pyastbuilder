@@ -152,3 +152,56 @@ class TestListAccessors(TestCase):
         """
         pyx = self._gen(doc)
         self.assertGreaterEqual(self._assert_helpers_exist(pyx), 4)
+
+    def test_the_emitted_iterator_satisfies_the_iterator_protocol(self):
+        """`ListIterator` must be its own iterable.
+
+        It had `__next__` and no `__iter__`, which is not an iterator: the
+        protocol requires both. Python 3.12 did not notice, because
+        `list(obj.field())` reaches `__next__` through `ListUtil.__iter__`
+        without ever calling `iter()` on the result. Python 3.13 does notice,
+        and `[x for x in obj.field()]` raises
+
+            TypeError: 'ListIterator' object is not iterable
+
+        So the defect presented as a scattered subset of a downstream suite
+        failing on one interpreter version -- pssparser lost exactly one test
+        on cp313 while cp312 stayed green -- rather than as anything pointing
+        at this generator.
+
+        The emitted helpers are plain Python, so this executes them rather
+        than pattern-matching the text: the assertion is that they behave as
+        an iterable on the interpreter running the test.
+        """
+        doc = """
+        classes:
+        - Holder:
+            - data:
+                - names: list<string>
+        """
+        pyx = self._gen(doc)
+
+        m = re.search(
+            r"^class ListIterator\(object\):.*?(?=^class ListUtil\()",
+            pyx, re.S | re.M)
+        self.assertIsNotNone(m, "ListIterator was not emitted at all")
+
+        m2 = re.search(r"^class ListUtil\(object\):.*?(?=^\S|\Z)",
+                       pyx, re.S | re.M)
+        self.assertIsNotNone(m2, "ListUtil was not emitted at all")
+
+        ns = {}
+        exec(m.group(0) + "\n" + m2.group(0), ns)
+
+        util = ns["ListUtil"](lambda: 3, lambda i: i * 10)
+
+        # The call that always worked, so the fix did not narrow it.
+        self.assertEqual(list(util), [0, 10, 20])
+
+        # The call that broke on 3.13.
+        self.assertEqual([x for x in util], [0, 10, 20])
+
+        # The property itself, stated directly.
+        it = iter(util)
+        self.assertIs(iter(it), it)
+        self.assertEqual([x for x in it], [0, 10, 20])

@@ -13,6 +13,7 @@ from astbuilder.cmds import gen_cpp
 from astbuilder.cmds import gen_pyext
 from astbuilder.cmds import gen_ts
 from astbuilder.cmds import gen_wasm
+from astbuilder.cmds import gen_census
 
 
 
@@ -66,6 +67,19 @@ def getparser():
     gen_wasm_cmd.add_argument("-ts", required=True,
         help="Directory to write deserialize.ts into (the gen-ts output tree)")
     gen_wasm_cmd.add_argument("-license")
+
+    gen_census_cmd = subparsers.add_parser("gen-census",
+        help="Generates the Python/TypeScript AST census pair used for parity testing")
+    gen_census_cmd.set_defaults(func=gen_census.gen)
+    gen_census_cmd.add_argument("-astdir", nargs="+")
+    # Two required outputs, for gen-wasm's reason. Neither half is shipped: the
+    # Python one is imported by a fixture generator and the TypeScript one by a
+    # test, so both belong outside the package's source tree.
+    gen_census_cmd.add_argument("-py", required=True,
+        help="Directory to write census_gen.py into")
+    gen_census_cmd.add_argument("-ts", required=True,
+        help="Directory to write census.ts into")
+    gen_census_cmd.add_argument("-license")
 
     return parser
 

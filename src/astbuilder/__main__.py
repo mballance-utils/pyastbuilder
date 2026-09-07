@@ -12,6 +12,7 @@ from astbuilder.linker import Linker
 from astbuilder.cmds import gen_cpp
 from astbuilder.cmds import gen_pyext
 from astbuilder.cmds import gen_ts
+from astbuilder.cmds import gen_wasm
 
 
 
@@ -50,6 +51,21 @@ def getparser():
     # accepted and ignored.
     gen_ts_cmd.add_argument("--no-visitor", action="store_true",
         help="Omit visitor.ts and the accept() method on each class")
+
+    gen_wasm_cmd = subparsers.add_parser("gen-wasm",
+        help="Generates the C++/TypeScript AST serialisation pair")
+    gen_wasm_cmd.set_defaults(func=gen_wasm.gen)
+    gen_wasm_cmd.add_argument("-astdir", nargs="+")
+    # Two required outputs rather than one -o. The halves land in different
+    # trees -- the C++ beside the WASM build, the TypeScript beside the classes
+    # it constructs -- and defaulting either to the cwd would let one be
+    # regenerated without the other, which is the one thing this backend exists
+    # to prevent.
+    gen_wasm_cmd.add_argument("-cpp", required=True,
+        help="Directory to write AstSerializer.{h,cpp} into")
+    gen_wasm_cmd.add_argument("-ts", required=True,
+        help="Directory to write deserialize.ts into (the gen-ts output tree)")
+    gen_wasm_cmd.add_argument("-license")
 
     return parser
 

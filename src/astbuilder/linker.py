@@ -44,7 +44,6 @@ class Linker(Visitor):
             
         sort_order = list(toposort(sort_d))
 
-        print("sort_order: " + str(sort_order))
         classes = []        
         for o in sort_order:
             for i in o:

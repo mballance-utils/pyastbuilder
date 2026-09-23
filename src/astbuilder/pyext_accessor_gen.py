@@ -65,8 +65,6 @@ class PyExtAccessorGen(Visitor):
             t, 
             is_pydecl=False,
             is_pytype=False) + " get" + name + "();")
-        self.pyi.println("def get%s(self) -> %s: ..." % (name, self.pyi_tgen.gen(t)))
-        self.pyi.println()
         
     
     def visitTypeMap(self, t):
@@ -202,8 +200,20 @@ class PyExtAccessorGen(Visitor):
         # Generate a non-const accessor
         self.decl_pxd.println("void set" + name + "(" +
             self.decl_pxd_ptr_tgen.gen(t) + " v)")
-        
-        self.pyi.println("def set%s(self, v : %s): ..." % (
+
+        # The Python-side setter. It used to be missing, which left the stub
+        # promising 21 setters that raised AttributeError. The value crosses
+        # the boundary as an int, so the IntEnum members and plain ints both
+        # work; the getter likewise returns an int.
+        self.pxd.println("cpdef void set%s(self, int v)" % name)
+        self.pyx.println("cpdef void set%s(self, int v):" % name)
+        self.pyx.inc_indent()
+        self.pyx.println("dynamic_cast[%s_decl.I%sP](self._hndl).set%s(<%s_decl.%s>v)" % (
+            self.name, self.clsname, name, self.name, t.name))
+        self.pyx.dec_indent()
+
+        self.pyi.println("def get%s(self) -> int: ..." % name)
+        self.pyi.println("def set%s(self, v : %s | int) -> None: ..." % (
             name, 
             self.pyi_tgen.gen(t)))
         self.pyi.println()

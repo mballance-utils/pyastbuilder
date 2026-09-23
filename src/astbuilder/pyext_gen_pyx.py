@@ -72,7 +72,7 @@ class PyExtGenPyx(Visitor):
         
         self.pyx.println("from enum import IntEnum")
         self.pyi.println("from enum import IntEnum, auto")
-        self.pyi.println("from typing import Dict, List, Tuple")
+        self.pyi.println("from typing import Dict, Generic, Iterator, List, Tuple, TypeVar")
 
         self.pyx.println()
         self.pyx.println("if sys.platform == 'darwin':")
@@ -422,8 +422,12 @@ class PyExtGenPyx(Visitor):
             if c.doc is not None:
                 self.pyi.inc_indent()
                 self.pyi.println("\"\"\"")
+                # The schema docs quote PSS, and PSS has triple-quoted
+                # strings: an unescaped one ends the docstring early and
+                # makes the whole stub a syntax error.
                 for line in c.doc.split('\n'):
-                    self.pyi.println(line)
+                    self.pyi.println(
+                        line.replace('\\', '\\\\').replace('"""', '\\"\\"\\"'))
                 self.pyi.println("\"\"\"")
                 self.pyi.dec_indent()
         else:
@@ -546,7 +550,9 @@ class PyExtGenPyx(Visitor):
             self.decl_pxd.println("pass")
             
         if c.super is None:
-            self.decl_pxd.println("void accept(VisitorBase *v)")
+            # `except +`: a Python visitor override that raises unwinds the
+            # C++ traversal as PyErrAlreadySet (see pyext_gen_visitor.py).
+            self.decl_pxd.println("void accept(VisitorBase *v) except +")
             
         self.decl_pxd.dec_indent()
         self.pyx.dec_indent()

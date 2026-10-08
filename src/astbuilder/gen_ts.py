@@ -113,7 +113,7 @@ class GenTS(Visitor):
         # Struct fields may be enum-typed, and this file has no other reason
         # to import anything -- which is exactly why the import was missing
         # from a previous generator.
-        out.println("import * as enums from './enums';")
+        out.println("import * as enums from './enums.js';")
         out.println()
         for s in ast.structs:
             out.println("export interface %s {" % s.name)
@@ -138,14 +138,14 @@ class GenTS(Visitor):
     def generate_classes(self, ast):
         out = self._open()
         if self.gen_visitor:
-            out.println("import type { ASTVisitor } from './visitor';")
+            out.println("import type { ASTVisitor } from './visitor.js';")
         # Every struct, and its mk<Name>() factory: the factories are the
         # field defaults, so they are imported as values, not types.
         if ast.structs:
-            out.println("import { %s } from './structs';" % ", ".join(
+            out.println("import { %s } from './structs.js';" % ", ".join(
                 "type %s, mk%s" % (s.name, s.name) for s in ast.structs))
-        out.println("import * as enums from './enums';")
-        out.println("import * as flags from './flags';")
+        out.println("import * as enums from './enums.js';")
+        out.println("import * as flags from './flags.js';")
         out.println("export { enums, flags };")
         out.println()
 
@@ -188,7 +188,7 @@ class GenTS(Visitor):
     def generate_visitor(self, ast):
         out = self._open()
         for c in ast.classes:
-            out.println("import type { %s } from './classes';" % c.name)
+            out.println("import type { %s } from './classes.js';" % c.name)
         out.println()
         out.println("export interface ASTVisitor<T> {")
         out.inc_indent()
@@ -219,11 +219,11 @@ class GenTS(Visitor):
 
     def generate_factory(self, ast):
         out = self._open()
-        out.println("import * as cls from './classes';")
-        out.println("import * as enums from './enums';")
-        out.println("import * as flags from './flags';")
+        out.println("import * as cls from './classes.js';")
+        out.println("import * as enums from './enums.js';")
+        out.println("import * as flags from './flags.js';")
         if ast.structs:
-            out.println("import { %s } from './structs';" % ", ".join(
+            out.println("import { %s } from './structs.js';" % ", ".join(
                 "mk%s" % s.name for s in ast.structs))
         out.println()
         out.println("export class ASTFactory {")
@@ -248,11 +248,11 @@ class GenTS(Visitor):
 
     def generate_index(self):
         out = self._open()
-        out.println("export * from './enums';")
-        out.println("export * from './flags';")
-        out.println("export * from './structs';")
-        out.println("export * from './classes';")
+        out.println("export * from './enums.js';")
+        out.println("export * from './flags.js';")
+        out.println("export * from './structs.js';")
+        out.println("export * from './classes.js';")
         if self.gen_visitor:
-            out.println("export * from './visitor';")
-        out.println("export * from './factory';")
+            out.println("export * from './visitor.js';")
+        out.println("export * from './factory.js';")
         self._write("index.ts", out)

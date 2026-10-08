@@ -176,7 +176,7 @@ structs:
         data:
             - kind: Kind
 """)
-    assert "import * as enums from './enums';" in out["structs.ts"]
+    assert "import * as enums from './enums.js';" in out["structs.ts"]
     assert "kind: enums.Kind" in out["structs.ts"]
 
 

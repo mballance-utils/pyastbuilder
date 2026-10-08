@@ -59,8 +59,29 @@ class ListUtil(object):
     
     def __iter__(self):
         return ListIterator(self.n_children(), self.get_child)
+
+    def __len__(self):
+        return self.n_children()
+
+    def __getitem__(self, i):
+        n = self.n_children()
+        if i < 0:
+            i += n
+        if i < 0 or i >= n:
+            raise IndexError("list index out of range")
+        return self.get_child(i)
+"""
+        # The stub mirrors the runtime class above, member for member.
+        list_util_pyi = """
+_T = TypeVar("_T")
+
+class ListUtil(Generic[_T]):
+    def __iter__(self) -> Iterator[_T]: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, i: int) -> _T: ...
 """
         self.pyx.println(list_iterator)
         self.pyx.println(list_util)
+        self.pyi.println(list_util_pyi)
         pass
 

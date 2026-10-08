@@ -79,10 +79,10 @@ class PyExtGenVisitor(Visitor):
 
         for c in ast.rootClasses():
             # Python-callable visitor method to traverse through the base type
-            self.decl_pxd.println("void py_accept%s(I%s *i);" % (c.name, c.name))
+            self.decl_pxd.println("void py_accept%s(I%s *i) except +" % (c.name, c.name))
 
         for c in ast.classes:
-            self.decl_pxd.println("void py_visit%sBase(I%s *i)" % (c.name, c.name))
+            self.decl_pxd.println("void py_visit%sBase(I%s *i) except +" % (c.name, c.name))
         self.decl_pxd.dec_indent()
         self.decl_pxd.dec_indent()
         
@@ -152,6 +152,12 @@ class PyExtGenVisitor(Visitor):
 
         CppGenNS.enter(self.namespace, self.hpp)        
         CppGenNS.enter(self.namespace, self.cpp)
+
+        # Thrown by visitX when the Python override raised. The Python error
+        # indicator stays set; Cython's `except +` translation sees it and
+        # re-raises the original exception rather than a RuntimeError.
+        self.hpp.println("struct PyErrAlreadySet {};")
+        self.hpp.println()
        
         # Constructor 
         self.hpp.println("class PyBaseVisitor : public VisitorBase {")
@@ -200,7 +206,16 @@ class PyExtGenVisitor(Visitor):
             self.hpp.println("virtual void visit%s(I%s *i) override;" % (c.name, c.name))
             self.cpp.println("void PyBaseVisitor::visit%s(I%s *i) {" % (c.name, c.name))
             self.cpp.inc_indent()
-            self.cpp.println("%s_call_visit%s(m_proxy, i);" % (self.name, c.name))
+            # A NULL result means the Python override raised. Unwind the C++
+            # traversal so that no further callbacks run; the entry point
+            # (accept / py_visitXBase, declared `except +`) re-raises it.
+            self.cpp.println("PyObject *ret = %s_call_visit%s(m_proxy, i);" % (self.name, c.name))
+            self.cpp.println("if (!ret) {")
+            self.cpp.inc_indent()
+            self.cpp.println("throw PyErrAlreadySet();")
+            self.cpp.dec_indent()
+            self.cpp.println("}")
+            self.cpp.println("Py_DECREF(ret);")
             self.cpp.dec_indent()
             self.cpp.println("}")
 

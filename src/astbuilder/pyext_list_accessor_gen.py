@@ -23,6 +23,7 @@ from astbuilder.ast_enum import AstEnum
 from astbuilder.ast_flags import AstFlags
 from astbuilder.ast_struct import AstStruct
 from astbuilder.visitor import Visitor
+from astbuilder.pyext_type_name_gen_pyi import PyExtTypeNameGenPyi
 from astbuilder.type_pointer import PointerKind
 from astbuilder.type_scalar import TypeKind
 
@@ -58,14 +59,23 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
         self.pyx.println()
 
-        self.pyi.println("def %s(self) -> ListUtil..." % lname)
-        self.pyi.inc_indent()
-        self.pyi.println("\"\"\"Returns an iterator over the items\"\"\"")
-        self.pyi.dec_indent()
-        self.pyi.println()
-
         t.accept(self)
-        pass
+        self._genPyi(t)
+
+    def _genPyi(self, t):
+        # Every list shape (pointer, scalar, enum, by-value struct) gets the
+        # same five runtime members, so the stub is emitted in one place from
+        # the same spellings the pyx helpers use. Emitting it piecemeal is how
+        # the stub once carried an invalid `-> ListUtil...` line and a
+        # zero-argument `getPath()` that shadowed `getPath(i)`.
+        name, sname, lname = self._elemNames()
+        etype = PyExtTypeNameGenPyi(ns=self.name).gen(t.t)
+        self.pyi.println("def %s(self) -> ListUtil[%s]: ..." % (self.field.name, etype))
+        self.pyi.println("def get%s(self) -> List[%s]: ..." % (lname, etype))
+        self.pyi.println("def get%s(self, i: int) -> %s: ..." % (sname, etype))
+        self.pyi.println("def add%s(self, i: %s) -> None: ..." % (sname, etype))
+        self.pyi.println("def num%s(self) -> int: ..." % name)
+        self.pyi.println()
 
     def visitTypePointer(self, t):
         print("list-pointer accessor")
@@ -406,8 +416,6 @@ class PyExtListAccessorGen(Visitor):
             t.name, self.clsname, name))
         self.pyx.dec_indent()
 
-        self.pyi.println("def get%s(self, i) -> '%s': ..." % (sname, t.name))
-        self.pyi.println()
 
     def _getAsListUserDef(self, t):
         name, sname, lname = self._elemNames()
@@ -422,8 +430,6 @@ class PyExtListAccessorGen(Visitor):
             sname, name))
         self.pyx.dec_indent()
 
-        self.pyi.println("def get%s(self) -> List['%s']: ..." % (lname, t.name))
-        self.pyi.println()
 
     def _addItemUserDef(self, t):
         name, sname, _ = self._elemNames()
@@ -438,5 +444,3 @@ class PyExtListAccessorGen(Visitor):
             self.clsname, name))
         self.pyx.dec_indent()
 
-        self.pyi.println("def add%s(self, i : '%s'): ..." % (sname, t.name))
-        self.pyi.println()

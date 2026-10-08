@@ -11,6 +11,7 @@ from astbuilder.ast import Ast
 from astbuilder.linker import Linker
 from astbuilder.cmds import gen_cpp
 from astbuilder.cmds import gen_pyext
+from astbuilder.cmds import gen_ts
 
 
 
@@ -38,6 +39,17 @@ def getparser():
     gen_py_ext.add_argument("-namespace")
     gen_py_ext.add_argument("-name")
     gen_py_ext.add_argument("-package")
+
+    gen_ts_cmd = subparsers.add_parser("gen-ts",
+        help="Generates TypeScript data structures")
+    gen_ts_cmd.set_defaults(func=gen_ts.gen)
+    gen_ts_cmd.add_argument("-astdir", nargs="+")
+    gen_ts_cmd.add_argument("-o")
+    gen_ts_cmd.add_argument("-license")
+    # No -namespace or -name: TypeScript scopes by module, so both would be
+    # accepted and ignored.
+    gen_ts_cmd.add_argument("--no-visitor", action="store_true",
+        help="Omit visitor.ts and the accept() method on each class")
 
     return parser
 

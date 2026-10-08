@@ -67,7 +67,6 @@ class Parser(object):
             if cls[ast_cls.name] is not None:
                 root = cls[ast_cls.name]
                 if isinstance(root, dict):
-                    print("DICT")
                     for key in root.keys():
                         if key == "super":
                             ast_cls.super = TypeUserDef(root[key])
@@ -98,7 +97,6 @@ class Parser(object):
                 
     def parse_class_data(self, ast_cls, data):
 
-        print("parse_class_data: %s" % ast_cls.name)        
         for elem in data:
             name = next(iter(elem)).strip()
 
@@ -173,7 +171,6 @@ class Parser(object):
             if cls[ast_cls.name] is not None:
                 root = cls[ast_cls.name]
                 if isinstance(root, dict):
-                    print("DICT")
                     for key in root.keys():
                         if key == "data":
                             self.parse_class_data(ast_cls, root[key])
@@ -235,8 +232,6 @@ class Parser(object):
         elif item.startswith("map<"):
             key_type = item[item.find('<')+1:item.rfind(',')].strip()
             val_type = item[item.rfind(',')+1:item.rfind('>')].strip()
-            print("key_type: " + key_type)
-            print("val_type: " + val_type)
             ret = TypeMap(
                 self.parse_simple_type(key_type),
                 self.parse_simple_type(val_type))
@@ -249,7 +244,6 @@ class Parser(object):
     def parse_enums(self, enums):
         
         for enum in enums:
-            print("enum: " + str(enum))
 #            ast_e = AstEnum(enum['name'].strip())
             ast_e = AstEnum(next(iter(enum.keys())))
 

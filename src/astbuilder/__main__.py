@@ -14,6 +14,7 @@ from astbuilder.cmds import gen_pyext
 from astbuilder.cmds import gen_ts
 from astbuilder.cmds import gen_wasm
 from astbuilder.cmds import gen_census
+from astbuilder.cmds import gen_reflect
 
 
 
@@ -80,6 +81,16 @@ def getparser():
     gen_census_cmd.add_argument("-ts", required=True,
         help="Directory to write census.ts into")
     gen_census_cmd.add_argument("-license")
+
+    gen_reflect_cmd = subparsers.add_parser("gen-reflect",
+        help="Generates C++ reflection tables: classes, fields, getters by name")
+    gen_reflect_cmd.set_defaults(func=gen_reflect.gen)
+    gen_reflect_cmd.add_argument("-astdir", nargs="+")
+    gen_reflect_cmd.add_argument("-o", required=True,
+        help="Directory to write Reflect.{h,cpp} into")
+    gen_reflect_cmd.add_argument("-namespace", required=True,
+        help="C++ namespace of the generated AST (the tables go in <ns>::reflect)")
+    gen_reflect_cmd.add_argument("-license")
 
     return parser
 

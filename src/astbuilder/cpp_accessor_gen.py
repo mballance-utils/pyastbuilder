@@ -6,6 +6,7 @@ from astbuilder.visitor import Visitor
 from astbuilder.cpp_type_name_gen import CppTypeNameGen
 from astbuilder.type_scalar import TypeKind
 from astbuilder.type_pointer import PointerKind
+from astbuilder import naming
 
 class CppAccessorGen(Visitor):
     # Integer and pointer
@@ -66,7 +67,7 @@ class CppAccessorGen(Visitor):
             self.gen_scalar_accessors(t)
 
     def decl_struct_accessor(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println(
@@ -103,7 +104,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}")
     
     def gen_collection_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println("virtual " + self.const_ref_ret(t) + "get" + name + "() const override;")
@@ -131,7 +132,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}")        
    
     def gen_scalar_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println(
@@ -168,7 +169,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}")
         
     def gen_rawptr_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println("virtual " + 
@@ -203,7 +204,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}") 
                        
     def gen_uptr_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println("virtual " +
@@ -239,7 +240,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}")
 
     def gen_sptr_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println("virtual " + 
@@ -272,7 +273,7 @@ class CppAccessorGen(Visitor):
         self.out_cpp.println("}")
                         
     def gen_string_accessors(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         
         # Generate a read-only accessor
         self.out_h.println("virtual " + 

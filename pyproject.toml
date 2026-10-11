@@ -25,6 +25,10 @@ dependencies = [
 # suffix on non-tag builds.
 dynamic = ["version"]
 
+[project.optional-dependencies]
+# astbuilder.sphinx; its diagrams also need Graphviz's `dot` on the PATH.
+sphinx = ["sphinx>=7"]
+
 [project.urls]
 Homepage = "https://github.com/mballance/pyastbuilder"
 
@@ -36,6 +40,9 @@ version = { attr = "astbuilder.__version__._pkg_version" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"astbuilder.sphinx" = ["static/*.css"]
 
 [tool.pytest.ini_options]
 # Anchors rootdir here, so the enclosing repo's pytest.ini isn't picked up, and

@@ -17,6 +17,7 @@ from astbuilder.type_userdef import TypeUserDef
 from astbuilder.visitor import Visitor
 from astbuilder.pyext_gen_params import PyExtGenParams
 from astbuilder.pyext_gen_utils import PyExtGenUtils
+from astbuilder import naming
 
 
 class PyExtGenPyx(Visitor):
@@ -273,7 +274,7 @@ class PyExtGenPyx(Visitor):
         self.decl_pxd.println("cdef cppclass IFactory:")
         self.decl_pxd.inc_indent()
         for c in self.ast.classes:
-            name = c.name[0].upper() + c.name[1:]
+            name = naming.cap(c.name)
             self.decl_pxd.println("I%s *mk%s(" % (c.name, name))
             self.decl_pxd.inc_indent(2)
             have_params = PyExtGenParams.gen_ctor_params(
@@ -298,7 +299,7 @@ class PyExtGenPyx(Visitor):
         self.pxd.println("cdef %s_decl.IFactory *_hndl" % (self.name,))
 
         for c in self.ast.classes:
-            name = c.name[0].upper() + c.name[1:]
+            name = naming.cap(c.name)
             self.pxd.write("%scpdef %s mk%s(" % (self.pxd.ind, c.name, name))
             PyExtGenParams.gen_ctor_params(
                 self.name, c, self.pxd, is_pydecl=False, is_pytype=True, ins_self=True)

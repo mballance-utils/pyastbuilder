@@ -8,6 +8,7 @@ import os
 from astbuilder.cpp_gen_ns import CppGenNS
 from astbuilder.outstream import OutStream
 from astbuilder.cpp_gen_params import CppGenParams
+from astbuilder import naming
 
 
 class CppGenFactory(object):
@@ -125,7 +126,7 @@ class CppGenFactory(object):
     def gen_methods(self, out_ih, out_h, out_cpp):
         
         for c in self.ast.classes:
-            name = c.name[0].upper()+ c.name[1:]
+            name = naming.cap(c.name)
             out_ih.write("%svirtual I%s *mk%s(" % (out_ih.ind, c.name, name))
             CppGenParams.gen_ctor_params(c, out_ih)
             out_ih.write(") = 0;\n")

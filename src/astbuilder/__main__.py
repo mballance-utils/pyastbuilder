@@ -15,6 +15,7 @@ from astbuilder.cmds import gen_ts
 from astbuilder.cmds import gen_wasm
 from astbuilder.cmds import gen_census
 from astbuilder.cmds import gen_reflect
+from astbuilder.cmds import relations
 
 
 
@@ -91,6 +92,22 @@ def getparser():
     gen_reflect_cmd.add_argument("-namespace", required=True,
         help="C++ namespace of the generated AST (the tables go in <ns>::reflect)")
     gen_reflect_cmd.add_argument("-license")
+
+    relations_cmd = subparsers.add_parser("relations",
+        help="Writes the relationship graph (JSON) or one Graphviz view of it")
+    relations_cmd.set_defaults(func=relations.gen)
+    relations_cmd.add_argument("-astdir", nargs="+", required=True)
+    relations_cmd.add_argument("-o", help="Output file (default: stdout)")
+    relations_cmd.add_argument("-root", action="append",
+        help="A containment root class; repeat for more")
+    relations_cmd.add_argument("--format", choices=["json", "dot"], default="json")
+    relations_cmd.add_argument("--view", default="map",
+        choices=["inheritance", "containment", "neighbourhood", "map", "legend"],
+        help="The view, with --format dot")
+    relations_cmd.add_argument("--class", dest="cls",
+        help="The class an inheritance, containment or neighbourhood view is about")
+    relations_cmd.add_argument("--depth", type=int,
+        help="Levels shown by an inheritance or containment view")
 
     return parser
 

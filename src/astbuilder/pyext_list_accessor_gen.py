@@ -26,6 +26,7 @@ from astbuilder.visitor import Visitor
 from astbuilder.pyext_type_name_gen_pyi import PyExtTypeNameGenPyi
 from astbuilder.type_pointer import PointerKind
 from astbuilder.type_scalar import TypeKind
+from astbuilder import naming
 
 class PyExtListAccessorGen(Visitor):
 
@@ -44,14 +45,10 @@ class PyExtListAccessorGen(Visitor):
     def gen(self, field, t):
         self.field = field
 
-        cname = self.field.name[0].upper() + self.field.name[1:]
+        cname = naming.cap(self.field.name)
 #        lname = self.field.name.lower()
         lname = self.field.name
-        sname = cname
-        if sname.endswith("ren"):
-            sname = sname[:-3]
-        elif sname.endswith("s"):
-            sname = sname[:-1]
+        sname = naming.singular(cname)
 
         self.pyx.println("def %s(self) -> ListUtil:" % lname)
         self.pyx.inc_indent()
@@ -105,12 +102,8 @@ class PyExtListAccessorGen(Visitor):
         return getattr(t, "t", None) == TypeKind.String
 
     def _getAtScalar(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.singular(name)
 
         self.pxd.println("cpdef get%s(self, i)" % pname)
 
@@ -125,15 +118,9 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _getAsListScalar(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if not pname.endswith("ren") and not pname.endswith("s"):
-            pname += "List"
-        sname = name
-        if sname.endswith("ren"):
-            sname = name[:-3]
-        elif sname.endswith("s"):
-            sname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.plural(name)
+        sname = naming.singular(name)
 
         self.pxd.println("cpdef get%s(self)" % pname)
 
@@ -147,12 +134,8 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _addItemScalar(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.singular(name)
 
         self.pxd.println("cpdef void add%s(self, i)" % pname)
 
@@ -167,7 +150,7 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
 
 #     def _getAsIterator(self, t):
-#         name = self.field.name[0].upper() + self.field.name[1:]
+#         name = naming.cap(self.field.name)
 #         tname = t.t.name
 
 #         self.pxd.println("cpdef get%s(self)" % name)
@@ -211,12 +194,9 @@ class PyExtListAccessorGen(Visitor):
 #         self.pyx.dec_indent()
 
     def _getAsList(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
+        name = naming.cap(self.field.name)
+        pname = naming.plural(name)
         tname = t.t.name
-
-        if not pname.endswith("ren") and not pname.endswith("s"):
-            pname += "List"
 
         self.pxd.println("cpdef get%s(self)" % pname)
         
@@ -260,12 +240,8 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _getAt(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.singular(name)
         tname = t.t.name
 
         self.pxd.println("cpdef get%s(self, i)" % pname)
@@ -290,12 +266,8 @@ class PyExtListAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _addItem(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.singular(name)
         tname = t.t.name
 
         self.pxd.println("cpdef void add%s(self, %s i)" % (pname, tname))
@@ -331,7 +303,7 @@ class PyExtListAccessorGen(Visitor):
         # (`tname = t.t.name` used to be computed here and never used, which
         # made this the one shared helper that a by-value user-defined
         # element could not call -- TypeUserDef has no `.t`.)
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
 
         self.pxd.println("cpdef num%s(self)" % name)
         
@@ -390,15 +362,9 @@ class PyExtListAccessorGen(Visitor):
         `get<Name>List`.  Duplicated in every helper above; collected here so
         the user-defined ones cannot drift from what gen() emits.
         """
-        name = self.field.name[0].upper() + self.field.name[1:]
-        sname = name
-        if sname.endswith("ren"):
-            sname = name[:-3]
-        elif sname.endswith("s"):
-            sname = name[:-1]
-        lname = name
-        if not lname.endswith("ren") and not lname.endswith("s"):
-            lname += "List"
+        name = naming.cap(self.field.name)
+        sname = naming.singular(name)
+        lname = naming.plural(name)
         return name, sname, lname
 
     def _getAtUserDef(self, t):

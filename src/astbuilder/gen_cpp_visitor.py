@@ -13,6 +13,7 @@ from .cpp_type_name_gen import CppTypeNameGen
 from astbuilder.type_scalar import TypeScalar
 from astbuilder.cpp_gen_fwd_decl import CppGenFwdDecl
 from astbuilder.cpp_gen_ns import CppGenNS
+from astbuilder import naming
 
 
 class GenCppVisitor(Visitor):
@@ -140,7 +141,7 @@ class GenCppVisitor(Visitor):
         for d in c.data:
             if not d.visit:
                 continue
-            name = d.name[0].upper() + d.name[1:]
+            name = naming.cap(d.name)
             if isinstance(d.t, TypeList):
                 # Generate an iterator, as long as the
                 # list is of a complex type

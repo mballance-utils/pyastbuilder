@@ -26,6 +26,7 @@ from astbuilder.pyext_type_name_gen import PyExtTypeNameGen
 from astbuilder.type_map import TypeMap
 from astbuilder.pyext_call_param_gen import PyExtCallParamGen
 from astbuilder.pyext_rval_gen import PyExtRvalGen
+from astbuilder import naming
 
 class PyExtMapAccessorGen(Visitor):
 
@@ -65,7 +66,7 @@ class PyExtMapAccessorGen(Visitor):
     def gen(self, field, t : TypeMap):
         self.field = field
         self.mtype = t
-        cname = self.field.name[0].upper() + self.field.name[1:]
+        cname = naming.cap(self.field.name)
 #        t.vt.accept(self)
         # Generate C++ import
         self.decl_pxd.println("std_unordered_map[%s,%s] &get%s()" % (
@@ -92,12 +93,9 @@ class PyExtMapAccessorGen(Visitor):
 #        self._getSize(t)
 
     def _getAsList(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
+        name = naming.cap(self.field.name)
+        pname = naming.plural(name)
         tname = t.t.name
-
-        if not pname.endswith("ren") and not pname.endswith("s"):
-            pname += "List"
 
         self.pxd.println("cpdef get%s(self)" % pname)
         
@@ -138,12 +136,8 @@ class PyExtMapAccessorGen(Visitor):
 
     def _hasKey(self, t : TypeMap):
         name = self.field.name
-        cname = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        cname = naming.cap(self.field.name)
+        pname = naming.singular(name)
 #        tname = t.t.name
 
         self.pxd.println("cpdef bool %sHas(self, %s i)" % (
@@ -169,12 +163,8 @@ class PyExtMapAccessorGen(Visitor):
 
     def _getItem(self, t : TypeMap):
         name = self.field.name
-        cname = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        cname = naming.cap(self.field.name)
+        pname = naming.singular(name)
 
         self.pxd.println("cpdef %s %sAt(self, %s i)" % (
             self.tgen_py.gen(t.vt),
@@ -199,12 +189,8 @@ class PyExtMapAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _addItem(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
-        pname = name
-        if pname.endswith("ren"):
-            pname = name[:-3]
-        elif pname.endswith("s"):
-            pname = name[:-1]
+        name = naming.cap(self.field.name)
+        pname = naming.singular(name)
         tname = t.t.name
 
         self.pxd.println("cpdef void add%s(self, %s i)" % (pname, tname))
@@ -236,7 +222,7 @@ class PyExtMapAccessorGen(Visitor):
         self.pyx.dec_indent()
 
     def _getSize(self, t):
-        name = self.field.name[0].upper() + self.field.name[1:]
+        name = naming.cap(self.field.name)
         tname = t.t.name
 
         self.pxd.println("cpdef num%s(self)" % name)

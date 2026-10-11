@@ -1,0 +1,8 @@
+/* astbuilder.sphinx: keep the AST reference tables within the page. */
+table.astb-table { font-size: 0.9em; }
+table.astb-table td, table.astb-table th { vertical-align: top; }
+table.astb-projections code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.astb-diagram { max-width: 100%; overflow-x: auto; }

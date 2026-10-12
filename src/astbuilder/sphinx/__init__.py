@@ -212,6 +212,12 @@ def model_report(model):
     no_fdoc = [(c, d) for c, d in fields if not model.field_doc(c, d)[0]]
     notes.append("%d of %d classes and %d of %d fields have no description" % (
         len(no_cdoc), len(ast.classes), len(no_fdoc), len(fields)))
+    valued = list(ast.enums) + list(ast.flags)
+    no_edoc = [e for e in valued if not e.doc]
+    vals = [(e, v[0] if isinstance(v, tuple) else v) for e in valued for v in e.values]
+    no_vdoc = [(e, v) for e, v in vals if not e.value_docs.get(v)]
+    notes.append("%d of %d enums and flags and %d of %d values have no description" % (
+        len(no_edoc), len(valued), len(no_vdoc), len(vals)))
     unreach = model.rel.unreachable()
     if unreach:
         notes.append("%d classes no root contains: %s" % (

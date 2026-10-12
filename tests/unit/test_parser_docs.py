@@ -260,3 +260,51 @@ classes:
     assert ast.class_m["Node"].docline == 7
     assert _field(ast, "Node", "count").docline == 11
     assert ast.enum_m["Op"].value_doclines == {"Add": 3}
+
+
+# --------------------------------------------------------------------------
+# Enum and flags docs
+# --------------------------------------------------------------------------
+
+def test_enum_doc_mapping_form():
+    ast = _load("""
+enums:
+  - Color:
+      doc: The colours.
+      values:
+        - Red: "Warm"
+        - Blue
+flags:
+  - Attr:
+      doc: The attributes.
+      values:
+        - Rand
+        - Const: "Read-only"
+""")
+    e = ast.enum_m["Color"]
+    assert e.doc == "The colours." and e.docline == 4
+    assert e.values == [("Red", None), ("Blue", None)]
+    assert e.value_docs == {"Red": "Warm"}
+    f = ast.flags_m["Attr"]
+    assert f.doc == "The attributes."
+    assert f.values == ["Rand", "Const"] and f.value_docs == {"Const": "Read-only"}
+
+
+def test_enum_list_form_has_no_doc():
+    ast = _load("""
+enums:
+  - Color:
+      - Red
+""")
+    assert ast.enum_m["Color"].doc is None
+    assert ast.enum_m["Color"].values == [("Red", None)]
+
+
+@pytest.mark.parametrize("body,msg", [
+    ("      doc: x\n      vals: [A]\n", "unknown key vals"),
+    ("      doc: x\n", "values: must be a list"),
+    ("      Red\n", "expected a list of values"),
+])
+def test_enum_mapping_form_errors(body, msg):
+    with pytest.raises(Exception, match=msg):
+        _load("enums:\n  - Color:\n" + body)

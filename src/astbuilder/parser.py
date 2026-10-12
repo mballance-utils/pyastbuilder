@@ -330,11 +330,41 @@ class Parser(object):
             ast_e = AstEnum(str(next(iter(enum.keys()))))
             self._loc(ast_e, enum)
 
-            for e in enum[ast_e.name]:
+            for e in self.enum_values(ast_e, enum[ast_e.name]):
                 name = self.parse_enum_value(ast_e, e)
                 ast_e.values.append((name, None))
             
             self.ast.addEnum(ast_e)
+
+    def enum_values(self, ent, body):
+        """The value list of an enum or flags, in either form:
+
+            - Name:                         a list: the values
+                - Value
+            - Name:                         a mapping: `doc:` and `values:`
+                doc: "what it is"
+                values:
+                    - Value
+
+        Records the mapping form's doc on `ent`."""
+        if isinstance(body, list):
+            return body
+        if isinstance(body, dict):
+            values = None
+            for key, val in body.items():
+                if key == "doc":
+                    ent.doc = _plain(val)
+                    ent.docline = _line(val)
+                elif key == "values":
+                    values = val
+                else:
+                    raise Exception("%s: unknown key %s (expected doc or values)%s" % (
+                        ent.name, str(key), self._where(key)))
+            if not isinstance(values, list):
+                raise Exception("%s: values: must be a list%s" % (ent.name, self._where(body)))
+            return values
+        raise Exception("%s: expected a list of values or a mapping with values:%s" % (
+            ent.name, self._where(body)))
 
     def parse_enum_value(self, ent, v):
         """One enum or flags value, in any of the three forms:
@@ -387,7 +417,7 @@ class Parser(object):
             ast_f = AstFlags(str(next(iter(f.keys()))))
             self._loc(ast_f, f)
         
-            for fv in f[ast_f.name]:
+            for fv in self.enum_values(ast_f, f[ast_f.name]):
                 ast_f.values.append(self.parse_enum_value(ast_f, fv))
             
             self.ast.addFlags(ast_f)

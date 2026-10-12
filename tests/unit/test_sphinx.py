@@ -208,6 +208,26 @@ def test_coverage_notes():
     assert any("P<T> fields have no rel:" in n and "ExprRef.target" in n for n in notes)
 
 
+def test_coverage_notes_count_enums(tmp_path):
+    from astbuilder.sphinx import Model, model_report
+    (tmp_path / "model.yaml").write_text("""
+enums:
+  - Documented:
+      doc: The documented one.
+      values:
+        - A: "First"
+        - B
+  - Bare:
+      - C: "Third"
+classes:
+  - Root:
+      doc: The root.
+""")
+    m = Model("m", {"yaml": ["model.yaml"], "roots": ["Root"]}, str(tmp_path))
+    _, notes = model_report(m)
+    assert "1 of 2 enums and flags and 1 of 3 values have no description" in notes
+
+
 def test_diagrams_have_text_forms(built):
     text = _text((built / "index.html").read_text())
     assert "Class Field Relationship Holds" in text          # containment table
@@ -264,3 +284,49 @@ def test_doc_sections(tmp_path):
 def test_model_map_list_links_groups(built):
     index = (built / "index.html").read_text()
     assert 'href="ref.html#astb-group-m-model"' in index
+
+
+def test_struct_and_enum_docs_split_like_class_docs(tmp_path):
+    # A struct's Attributes: entries describe its fields in the fields table
+    # (a multi-line entry used to reach reST verbatim and break -W), and an
+    # enum's See Also: links like a class's.
+    src = tmp_path / "src"
+    (src / "model").mkdir(parents=True)
+    (src / "model" / "model.yaml").write_text("""
+enums:
+  - Kind:
+      doc: |
+          What a Pos points at.
+
+          See Also:
+              Pos
+      values:
+        - Here
+structs:
+  - Pos:
+      doc: |
+          A position.
+
+          Attributes:
+              line: The line, counted
+                  from 1.
+      data:
+        - line: int32_t
+        - col:
+            type: int32_t
+            doc: The column.
+classes:
+  - Root:
+      doc: The root.
+      data:
+        - at: Pos
+""")
+    (src / "conf.py").write_text(CONF % {"extra": ""})
+    (src / "index.rst").write_text("T\n=\n\n.. astb:model:: m\n   :no-diagram:\n")
+    r = _build(src, tmp_path / "out")
+    assert r.returncode == 0, r.stderr
+    text = _text((tmp_path / "out" / "index.html").read_text())
+    assert "line int32_t The line, counted from 1." in text
+    assert "col int32_t The column." in text
+    assert "Attributes" not in text
+    assert "See also: Pos" in text

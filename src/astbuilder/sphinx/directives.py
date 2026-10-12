@@ -516,7 +516,7 @@ class _AstbDirective(SphinxDirective):
         if e.srcline > 0:
             where += ", line %d" % e.srcline
         content += _para(nodes.emphasis(where, where))
-        content.extend(self.parse_doc(getattr(e, "doc", None), e))
+        self._doc_body(model, e, content)
         rows = []
         values = [v[0] if isinstance(v, tuple) else v for v in e.values]
         for i, v in enumerate(values):
@@ -536,13 +536,21 @@ class _AstbDirective(SphinxDirective):
                           rows, [30, 12, 58])
         return out
 
+    def _doc_body(self, model, ent, content):
+        """`ent`'s doc without its Attributes: section (shown in the
+        fields table), then its See Also: line."""
+        parts = model.doc_parts(ent)
+        content.extend(self.parse_doc(parts.body, ent))
+        if parts.see_also:
+            content.append(self.see_also(model, parts.see_also))
+
     def render_struct(self, model, s):
         out, sig, content = self._desc("struct", s.name, "struct")
         where = "Defined in %s.yaml" % model.group_of(s)
         if s.srcline > 0:
             where += ", line %d" % s.srcline
         content += _para(nodes.emphasis(where, where))
-        content.extend(self.parse_doc(getattr(s, "doc", None), s))
+        self._doc_body(model, s, content)
         rows = []
         for e in model.rel.edges(s):
             name = "%s.%s" % (s.name, e.field.name)
@@ -550,7 +558,9 @@ class _AstbDirective(SphinxDirective):
             p += nodes.literal(e.field.name, e.field.name)
             self.domain().note_object(name, "field", anchor("field", name))
             dcell = nodes.container()
-            dcell.extend(self.parse_doc(e.field.doc, e.field) or [nodes.paragraph("", "")])
+            text, src = model.field_doc(s, e.field)
+            dcell.extend((self.parse_doc(text, src) if text else None)
+                         or [nodes.paragraph("", "")])
             rows.append([p, _type_cell(e), dcell])
         if rows:
             content += _table(["Field", "Type", "Description"], rows, [20, 25, 55])
